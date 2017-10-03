@@ -1,0 +1,85 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="android:Theme.Holo.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="windowActionBar">true</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="simple_xy">
+        <item name="graphMarginTop">20dp</item>
+        <item name="graphMarginBottom">25dp</item>
+        <item name="graphMarginLeft">25dp</item>
+        <item name="graphMarginRight">20dp</item>
+        <item name="labelTextSize">13sp</item>
+        <item name="labelTextColor">#FFFFFF</item>
+        <item name="rangeLabelTextSize">13sp</item>
+        <item name="domainLabelTextSize">13sp</item>
+        <item name="legendTextSize">15sp</item>
+        <item name="legendIconHeight">15sp</item>
+        <item name="legendIconWidth">15sp</item>
+        <item name="legendHeight">25sp</item>
+        <item name="legendAnchorPosition">right_bottom</item>
+    </style>
+
+    <style name="APFullScreenGraph">
+        <item name="gridPaddingTop">10dp</item>
+        <item name="gridPaddingBottom">10dp</item>
+        <item name="gridPaddingLeft">10dp</item>
+        <item name="gridPaddingRight">10dp</item>
+        <item name="gridMarginTop">0dp</item>
+        <item name="gridMarginBottom">0dp</item>
+        <item name="gridMarginLeft">0dp</item>
+        <item name="gridMarginRight">0dp</item>
+        <item name="graphMarginTop">0dp</item>
+        <item name="graphMarginBottom">0dp</item>
+        <item name="graphMarginLeft">0dp</item>
+        <item name="graphMarginRight">0dp</item>
+        <item name="graphHeightSizeLayoutType">fill</item>
+        <item name="graphWidthSizeLayoutType">fill</item>
+        <item name="graphHeight">0</item>
+        <item name="graphWidth">0</item>
+        <item name="graphDomainLineThickness">1dp</item>
+        <item name="graphLayoutStyleX">absolute_from_left</item>
+        <item name="graphLayoutStyleY">absolute_from_top</item>
+        <item name="graphRangeLineThickness">1dp</item>
+        <item name="graphAnchorPosition">left_top</item>
+        <item name="graphPositionX">0dp</item>
+        <item name="graphPositionY">0dp</item>
+        <item name="legendVisible">false</item>
+        <item name="domainTickLabelWidth">0dp</item>
+        <item name="rangeTickLabelWidth">0dp</item>
+    </style>
+    <style name="APFullScreenGraph.Light">
+        <item name="graphDomainLineColor">@color/ap_black</item>
+        <item name="graphRangeLineColor">@color/ap_black</item>
+        <item name="backgroundColor">@color/ap_white</item>
+        <item name="gridBackgroundColor">@color/ap_white</item>
+        <item name="borderColor">@color/ap_transparent</item>
+    </style>
+    <style name="APFullScreenGraph.Minimalist">
+        <item name="android:padding">0dp</item>
+        <item name="android:layout_margin">0dp</item>
+        <item name="domainTickExtension">0dp</item>
+        <item name="rangeTickExtension">0dp</item>
+        <item name="showDomainLabels">false</item>
+        <item name="showRangeLabels">false</item>
+    </style>
+    <style name="APFullScreenGraph.Minimalist.Dark">
+        <item name="graphDomainLineColor">@color/ap_white</item>
+        <item name="graphRangeLineColor">@color/ap_white</item>
+        <item name="backgroundColor">@color/ap_black</item>
+        <item name="gridBackgroundColor">@color/ap_black</item>
+        <item name="borderColor">@color/ap_transparent</item>
+    </style>
+    <style name="APFullScreenGraph.Minimalist.Light">
+        <item name="graphDomainLineColor">@color/ap_black</item>
+        <item name="graphRangeLineColor">@color/ap_black</item>
+        <item name="backgroundColor">@color/ap_white</item>
+        <item name="gridBackgroundColor">@color/ap_white</item>
+        <item name="borderColor">@color/ap_transparent</item>
+    </style>
+</resources>
