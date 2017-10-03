@@ -1,9 +1,7 @@
 package com.yeolabgt.mahmoodms.androidssvepinterfacetf;
 
-import android.graphics.Color;
 import android.view.View;
 
-import com.androidplot.Plot;
 import com.androidplot.xy.BoundaryMode;
 import com.androidplot.xy.XYGraphWidget;
 import com.androidplot.xy.XYPlot;

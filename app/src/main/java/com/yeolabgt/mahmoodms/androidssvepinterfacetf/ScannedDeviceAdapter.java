@@ -30,13 +30,13 @@ class ScannedDeviceAdapter extends ArrayAdapter<ScannedDevice> {
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        ScannedDevice item = (ScannedDevice) getItem(position);
+        ScannedDevice item = getItem(position);
         if (convertView == null) {
             convertView = inflater.inflate(resId,null);
         }
-        TextView deviceNameTextview = (TextView) convertView.findViewById(R.id.device_name);
-        TextView deviceAddress = (TextView) convertView.findViewById(R.id.device_address);
-        TextView deviceRSSI = (TextView) convertView.findViewById(R.id.device_rssi);
+        TextView deviceNameTextview = convertView.findViewById(R.id.device_name);
+        TextView deviceAddress = convertView.findViewById(R.id.device_address);
+        TextView deviceRSSI = convertView.findViewById(R.id.device_rssi);
         deviceNameTextview.setText(item.getDisplayName());
         deviceAddress.setText(item.getDevice().getAddress());
         String currentRSSI = item.getRssi()+" dB";

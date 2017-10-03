@@ -17,7 +17,6 @@ import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.media.MediaPlayer;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -661,40 +660,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
 //    private class ClassifyTask extends AsyncTask<Void, Void, Double> {
 //        @Override
 //        protected Double doInBackground(Void... voids) {
-//            final int fPSDStartIndex = 16;
-//            final int fPSDEndIndex = 80;
-//            double[] getInstance1 = mGraphAdapterCh1.classificationBuffer;
-//            double[] getInstance2 = mGraphAdapterCh2.classificationBuffer;
-//            double[] pPSDCh1 = new double[250];
-//            double[] pPSDCh2 = new double[250];
-//            if (mFrequencyDomain) {
-//                double[] getInstancePSD1 = new double[500];
-//                double[] getInstancePSD2 = new double[500];
-//                System.arraycopy(mGraphAdapterCh1.classificationBuffer, 500, getInstancePSD1, 0, 500);
-//                System.arraycopy(mGraphAdapterCh2.classificationBuffer, 500, getInstancePSD2, 0, 500);
-//                double[] pPSD2ch = jPSDExtraction2ch(getInstancePSD1, getInstancePSD2);
-//                System.arraycopy(pPSD2ch, 0, pPSDCh1, 0, 250);
-//                System.arraycopy(pPSD2ch, 250, pPSDCh2, 0, 250);
-//                if (mPSDDataPointsToShow == 0) {
-//                    mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex;
-//                    int mcPSDDataPointsToShow = 176 - 34;
-//                    mGraphAdapterCh1PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
-//                    mGraphAdapterCh2PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
-//                    mGraphAdaptercPSDA.setSeriesHistoryDataPoints(mcPSDDataPointsToShow);
-//                    if (mPSDDataPointsToShow > 64)
-//                        mFreqDomainPlotAdapter.setXyPlotDomainIncrement(6.0);
-//                    else mFreqDomainPlotAdapter.setXyPlotDomainIncrement(2.0);
-//                }
-//            }
-//            double Y[] = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
-//            double cPSD[] = new double[499];
-//            System.arraycopy(Y, 2, cPSD, 0, 499);
-//            mGraphAdaptercPSDA.addDataPointsGeneric(fPSD, cPSD, 34, 176);
-//            mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD2ch, pPSDCh1, fPSDStartIndex, fPSDEndIndex);
-//            mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD2ch, pPSDCh2, fPSDStartIndex, fPSDEndIndex);
-//            mNumberOfClassifierCalls++;
-//            Log.e(TAG, "Classifier Output: [#" + String.valueOf(mNumberOfClassifierCalls) + "::" + String.valueOf(Y[0]) + "," + String.valueOf(Y[1]) + "]");
-//            return Y[1];
+//              return 0.0;
 //        }
 //
 //        @Override

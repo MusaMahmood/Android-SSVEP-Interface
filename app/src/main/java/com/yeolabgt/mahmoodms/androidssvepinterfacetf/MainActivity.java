@@ -171,55 +171,6 @@ public class MainActivity extends Activity {
         return true;
     }
 
-//    @Override
-//    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
-//        switch (requestCode) {
-//            case MY_PERMISSIONS_LOCATIONS_COARSE: {
-//                if(grantResults.length>0 && grantResults[0]==PackageManager.PERMISSION_GRANTED) {
-//
-//                } else {
-//                    runOnUiThread(new Runnable() {
-//                        @Override
-//                        public void run() {
-////                            Toast toast = Toast.makeText(getApplicationContext(),
-////                                    "This permission is needed for Bluetooth LE!", Toast.LENGTH_LONG);
-////                            toast.show();
-//                        }
-//                    });
-//                }
-//                return;
-//            }
-//            case MY_PERMISSIONS_WRITE_STORAGE: {
-//                if(grantResults.length>0 && grantResults[0]==PackageManager.PERMISSION_GRANTED) {
-//
-//                } else {
-//                    runOnUiThread(new Runnable() {
-//                        @Override
-//                        public void run() {
-////                            Toast toast = Toast.makeText(getApplicationContext(),
-////                                    "This permission is required to save data!", Toast.LENGTH_LONG);
-////                            toast.show();
-//                        }
-//                    });
-//                }
-//                return;
-//            }
-//            case MULTIPLE_PERMISSIONS_REQUEST: {
-//                if(grantResults.length>0 && grantResults[0]==PackageManager.PERMISSION_GRANTED && grantResults[1]==PackageManager.PERMISSION_GRANTED) {
-//                } else {
-//                    runOnUiThread(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            Toast toast = Toast.makeText(getApplicationContext(),
-//                                    "These permissions are required!", Toast.LENGTH_LONG);
-//                            toast.show();
-//                        }
-//                    });
-//                }
-//            }
-//        }
-//    }
-
     @Override
     protected void onPause() {
         super.onPause();
