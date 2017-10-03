@@ -308,6 +308,9 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         jmainInitialization(false);
         fPSD = jLoadfPSD();
         fPSD2ch = jLoadfPSD2ch();
+        double a[] = new double[1000]; Arrays.fill(a,0.0);
+        double b[] = new double[1000]; Arrays.fill(b,0.0);
+        jClassifySSVEP(a,b,2.28300);
         if (!fileSaveInitialized) {
             try {
                 saveDataFile();
@@ -590,9 +593,11 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 writeToDisk24(mCh1.characteristicDataPacketBytes, mCh2.characteristicDataPacketBytes);
             }
             if (packetNumber_2ch % 10 == 0) { //Every x * 6 data points
-                ClassifyTask classifyTask = new ClassifyTask();
+//                ClassifyTask classifyTask = new ClassifyTask();
+                Thread classifyTaskThread = new Thread(mClassifyTaskRunnableThread);
+                classifyTaskThread.start();
                 Log.e(TAG, "[" + String.valueOf(mNumberOfClassifierCalls + 1) + "] CALLING CLASSIFIER FUNCTION!");
-                classifyTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+//                classifyTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
             }
         }
 
@@ -653,58 +658,58 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         }
     };
 
-    private class ClassifyTask extends AsyncTask<Void, Void, Double> {
-        @Override
-        protected Double doInBackground(Void... voids) {
-            final int fPSDStartIndex = 16;
-            final int fPSDEndIndex = 80;
-            double[] getInstance1 = mGraphAdapterCh1.classificationBuffer;
-            double[] getInstance2 = mGraphAdapterCh2.classificationBuffer;
-            double[] pPSDCh1 = new double[250];
-            double[] pPSDCh2 = new double[250];
-            if (mFrequencyDomain) {
-                double[] getInstancePSD1 = new double[500];
-                double[] getInstancePSD2 = new double[500];
-                System.arraycopy(mGraphAdapterCh1.classificationBuffer, 500, getInstancePSD1, 0, 500);
-                System.arraycopy(mGraphAdapterCh2.classificationBuffer, 500, getInstancePSD2, 0, 500);
-                double[] pPSD2ch = jPSDExtraction2ch(getInstancePSD1, getInstancePSD2);
-                System.arraycopy(pPSD2ch, 0, pPSDCh1, 0, 250);
-                System.arraycopy(pPSD2ch, 250, pPSDCh2, 0, 250);
-                if (mPSDDataPointsToShow == 0) {
-                    mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex;
-                    int mcPSDDataPointsToShow = 176 - 34;
-                    mGraphAdapterCh1PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
-                    mGraphAdapterCh2PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
-                    mGraphAdaptercPSDA.setSeriesHistoryDataPoints(mcPSDDataPointsToShow);
-                    if (mPSDDataPointsToShow > 64)
-                        mFreqDomainPlotAdapter.setXyPlotDomainIncrement(6.0);
-                    else mFreqDomainPlotAdapter.setXyPlotDomainIncrement(2.0);
-                }
-            }
-            double Y[] = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
-            double cPSD[] = new double[499];
-            System.arraycopy(Y, 2, cPSD, 0, 499);
-            mGraphAdaptercPSDA.addDataPointsGeneric(fPSD, cPSD, 34, 176);
-            mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD2ch, pPSDCh1, fPSDStartIndex, fPSDEndIndex);
-            mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD2ch, pPSDCh2, fPSDStartIndex, fPSDEndIndex);
-            mNumberOfClassifierCalls++;
-            Log.e(TAG, "Classifier Output: [#" + String.valueOf(mNumberOfClassifierCalls) + "::" + String.valueOf(Y[0]) + "," + String.valueOf(Y[1]) + "]");
-            return Y[1];
-        }
-
-        @Override
-        protected void onPostExecute(Double predictedClass) {
-            final String s = "SSVEP cPSDA\n: [" + String.valueOf(predictedClass) + "]";
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mYfitTextView.setText(s);
-                }
-            });
-            executeWheelchairCommand((int) (double) predictedClass);
-            super.onPostExecute(predictedClass);
-        }
-    }
+//    private class ClassifyTask extends AsyncTask<Void, Void, Double> {
+//        @Override
+//        protected Double doInBackground(Void... voids) {
+//            final int fPSDStartIndex = 16;
+//            final int fPSDEndIndex = 80;
+//            double[] getInstance1 = mGraphAdapterCh1.classificationBuffer;
+//            double[] getInstance2 = mGraphAdapterCh2.classificationBuffer;
+//            double[] pPSDCh1 = new double[250];
+//            double[] pPSDCh2 = new double[250];
+//            if (mFrequencyDomain) {
+//                double[] getInstancePSD1 = new double[500];
+//                double[] getInstancePSD2 = new double[500];
+//                System.arraycopy(mGraphAdapterCh1.classificationBuffer, 500, getInstancePSD1, 0, 500);
+//                System.arraycopy(mGraphAdapterCh2.classificationBuffer, 500, getInstancePSD2, 0, 500);
+//                double[] pPSD2ch = jPSDExtraction2ch(getInstancePSD1, getInstancePSD2);
+//                System.arraycopy(pPSD2ch, 0, pPSDCh1, 0, 250);
+//                System.arraycopy(pPSD2ch, 250, pPSDCh2, 0, 250);
+//                if (mPSDDataPointsToShow == 0) {
+//                    mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex;
+//                    int mcPSDDataPointsToShow = 176 - 34;
+//                    mGraphAdapterCh1PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
+//                    mGraphAdapterCh2PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
+//                    mGraphAdaptercPSDA.setSeriesHistoryDataPoints(mcPSDDataPointsToShow);
+//                    if (mPSDDataPointsToShow > 64)
+//                        mFreqDomainPlotAdapter.setXyPlotDomainIncrement(6.0);
+//                    else mFreqDomainPlotAdapter.setXyPlotDomainIncrement(2.0);
+//                }
+//            }
+//            double Y[] = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
+//            double cPSD[] = new double[499];
+//            System.arraycopy(Y, 2, cPSD, 0, 499);
+//            mGraphAdaptercPSDA.addDataPointsGeneric(fPSD, cPSD, 34, 176);
+//            mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD2ch, pPSDCh1, fPSDStartIndex, fPSDEndIndex);
+//            mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD2ch, pPSDCh2, fPSDStartIndex, fPSDEndIndex);
+//            mNumberOfClassifierCalls++;
+//            Log.e(TAG, "Classifier Output: [#" + String.valueOf(mNumberOfClassifierCalls) + "::" + String.valueOf(Y[0]) + "," + String.valueOf(Y[1]) + "]");
+//            return Y[1];
+//        }
+//
+//        @Override
+//        protected void onPostExecute(Double predictedClass) {
+//            final String s = "SSVEP cPSDA\n: [" + String.valueOf(predictedClass) + "]";
+//            runOnUiThread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    mYfitTextView.setText(s);
+//                }
+//            });
+//            executeWheelchairCommand((int) (double) predictedClass);
+//            super.onPostExecute(predictedClass);
+//        }
+//    }
 
     private void executeWheelchairCommand(int command) {
         byte[] bytes = new byte[1];

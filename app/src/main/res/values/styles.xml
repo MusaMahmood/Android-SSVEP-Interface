@@ -10,7 +10,7 @@
     </style>
 
     <!--parent = APDefacto-->
-    <style name="APFullScreenGraph">
+    <style name="APFullScreenGraph" parent="APDefacto">
         <item name="titleTextSize">20sp</item>
         <item name="rangeTitleTextSize">13sp</item>
         <item name="domainTitleTextSize">13sp</item>
@@ -67,5 +67,9 @@
         <item name="domainTitleTextColor">@color/ap_black</item>
         <item name="rangeTitleTextColor">@color/ap_black</item>
         <item name="legendTextColor">@color/ap_black</item>
+    </style>
+    <style name="APFullScreenGraph.Light.Minimalist">
+        <item name="domainLineColor">@color/ap_white</item>
+        <item name="rangeLineColor">@color/ap_white</item>
     </style>
 </resources>
