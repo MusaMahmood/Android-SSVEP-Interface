@@ -41,7 +41,7 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     compile files('libs/opencsv-3.7.jar')
     compile project(':BeeLeLibrary')
-    compile 'com.androidplot:androidplot-core:0.9.8'
+    compile 'com.androidplot:androidplot-core:1.5.1'
     compile 'com.google.guava:guava:23.0-android'
 //    compile fileTree(dir: 'libs', include: ['*.jar'])
     //Original

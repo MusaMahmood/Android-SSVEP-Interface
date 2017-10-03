@@ -173,7 +173,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         mFreqDomainPlotAdapter = new XYPlotAdapter(findViewById(R.id.frequencyAnalysisXYPlot), "Frequency (Hz)", "Power Density (W/Hz)", 2.00);
         mFreqDomainPlotAdapter.xyPlot.addSeries(mGraphAdapterCh1PSDA.series, mGraphAdapterCh1PSDA.lineAndPointFormatter);
         mFreqDomainPlotAdapter.xyPlot.addSeries(mGraphAdapterCh2PSDA.series, mGraphAdapterCh2PSDA.lineAndPointFormatter);
-        mFreqDomainPlotAdapter.xyPlot.addSeries(mGraphAdaptercPSDA.series, mGraphAdaptercPSDA.lineAndPointFormatter);
+//        mFreqDomainPlotAdapter.xyPlot.addSeries(mGraphAdaptercPSDA.series, mGraphAdaptercPSDA.lineAndPointFormatter);
 
         redrawer = new Redrawer(
                 Arrays.asList(new Plot[]{mTimeDomainPlotAdapter.xyPlot, mFreqDomainPlotAdapter.xyPlot}), 60, false);
