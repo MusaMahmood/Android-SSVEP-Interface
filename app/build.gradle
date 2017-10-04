@@ -6,7 +6,7 @@ apply plugin: 'kotlin-android-extensions'
 
 android {
     compileSdkVersion 26
-    buildToolsVersion "26.0.1"
+    buildToolsVersion '26.0.2'
     defaultConfig {
         applicationId "com.yeolabgt.mahmoodms.androidssvepinterfacetf"
         minSdkVersion 22
@@ -43,7 +43,7 @@ dependencies {
     compile project(':BeeLeLibrary')
     compile 'com.androidplot:androidplot-core:1.5.1'
     compile 'com.google.guava:guava:23.0-android'
-//    compile fileTree(dir: 'libs', include: ['*.jar'])
+
     //Original
     testImplementation 'junit:junit:4.12'
     implementation 'com.android.support:appcompat-v7:26.1.0'

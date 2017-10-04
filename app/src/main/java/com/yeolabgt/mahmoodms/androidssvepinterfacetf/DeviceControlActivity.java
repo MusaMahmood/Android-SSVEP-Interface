@@ -21,6 +21,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.support.v4.app.NavUtils;
+import android.support.v4.content.FileProvider;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -63,6 +64,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     public XYPlotAdapter mFreqDomainPlotAdapter;
     private double[] fPSD;
     private double[] fPSD2ch;
+    private int sampleRate = 250;
     public static Redrawer redrawer;
     private final static String TAG = DeviceControlActivity.class.getSimpleName();
     //Refactored Data Channel Classes
@@ -145,14 +147,14 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         mDataRate = findViewById(R.id.dataRate);
         mDataRate.setText("...");
         mYfitTextView = findViewById(R.id.textViewYfit);
-        //Initialize Bluetooth
         ActionBar ab = getActionBar();
         ab.setTitle(mDeviceName);
         ab.setSubtitle(mDeviceAddress);
-        initializeBluetoothArray();
         // Initialize our XYPlot reference:
         mGraphAdapterCh1 = new GraphAdapter(1000, "EEG Data Ch 1", false, Color.BLUE, 1000); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
         mGraphAdapterCh2 = new GraphAdapter(1000, "EEG Data Ch 2", false, Color.RED, 1000); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
+        //Initialize Bluetooth
+        initializeBluetoothArray();
         mGraphAdaptercPSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (conv)", false, Color.BLACK, 0);
         mGraphAdapterCh1PSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (Ch1)", false, Color.BLUE, 0);
         mGraphAdapterCh2PSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (Ch2)", false, Color.RED, 0);
@@ -186,10 +188,11 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                     Log.e(TAG, "IOException in saveDataFile");
                     e.printStackTrace();
                 }
-                Uri uii;
-                uii = Uri.fromFile(file);
+                Context context = getApplicationContext();
+                Uri uii = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
                 Intent exportData = new Intent(Intent.ACTION_SEND);
-                exportData.putExtra(Intent.EXTRA_SUBJECT, "Ion Sensor Data Export Details");
+                exportData.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                exportData.putExtra(Intent.EXTRA_SUBJECT, "Sensor Data Export Details");
                 exportData.putExtra(Intent.EXTRA_STREAM, uii);
                 exportData.setType("text/html");
                 startActivity(exportData);
@@ -271,7 +274,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
      */
     public void saveDataFile() throws IOException {
         File root = Environment.getExternalStorageDirectory();
-        String fileTimeStamp = "EEG_SSVEPData_" + getTimeStamp() + "_" + String.valueOf((int) mSSVEPClass);
+//        String fileTimeStamp = "EEG_SSVEPData_" + getTimeStamp() + "_" + String.valueOf((int) mSSVEPClass);
+        String fileTimeStamp = "EEG_SSVEPData_" + getTimeStamp() + "_" + String.valueOf(sampleRate)+"Hz";
         Log.e(TAG, "fileTimeStamp: " + fileTimeStamp);
         if (root.canWrite()) {
             File dir = new File(root.getAbsolutePath() + "/EEGData");
@@ -310,13 +314,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         double a[] = new double[1000]; Arrays.fill(a,0.0);
         double b[] = new double[1000]; Arrays.fill(b,0.0);
         jClassifySSVEP(a,b,2.28300);
-        if (!fileSaveInitialized) {
-            try {
-                saveDataFile();
-            } catch (IOException ex) {
-                Log.e("IOEXCEPTION:", ex.toString());
-            }
-        }
         redrawer.start();
         super.onResume();
     }
@@ -355,6 +352,24 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 mMSBFirst = true;
             } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("nRF52".toLowerCase())) {
                 mMSBFirst = true;
+            }
+            if(mBluetoothDeviceArray[i].getName().toLowerCase().contains("4k".toLowerCase())) {
+                sampleRate = 4000;
+            } else {
+                sampleRate = 250;
+            }
+            Log.e(TAG,"sampleRate: "+sampleRate+"Hz" );
+            mGraphAdapterCh1.setxAxisIncrementFromSampleRate(sampleRate);
+            mGraphAdapterCh2.setxAxisIncrementFromSampleRate(sampleRate);
+            mGraphAdapterCh1.setSeriesHistoryDataPoints(sampleRate*5);
+            mGraphAdapterCh1.setSeriesHistoryDataPoints(sampleRate*5);
+
+            if (!fileSaveInitialized) {
+                try {
+                    saveDataFile();
+                } catch (IOException ex) {
+                    Log.e("IOEXCEPTION:", ex.toString());
+                }
             }
         }
     }
@@ -564,7 +579,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             if (mEEGConnected_2ch) {
                 mCh1.handleNewData(mNewEEGdataBytes);
                 if (mCh1.packetCounter == 6) {
-                    mCh1.addToGraphBuffer(mGraphAdapterCh1);
+                    mCh1.addToGraphBuffer(mGraphAdapterCh1, sampleRate);
                 }
             }
         }
@@ -579,7 +594,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             if (mEEGConnected_2ch) {
                 mCh2.handleNewData(mNewEEGdataBytes);
                 if (mCh2.packetCounter == 6) {
-                    mCh2.addToGraphBuffer(mGraphAdapterCh2);
+                    mCh2.addToGraphBuffer(mGraphAdapterCh2, sampleRate);
                 }
             }
         }

@@ -15,6 +15,8 @@ class GraphAdapter {
     private int seriesHistoryDataPoints;
     private int bufferSize;
     double[] classificationBuffer;
+    int sampleRate;
+    private double xAxisIncrement;
     boolean plotData;
 
     // Set/Get Methods (Don't need yet)
@@ -63,7 +65,16 @@ class GraphAdapter {
 
     void addDataPoint(double data, int index) {
         addToBuffer(data);
-        if(this.plotData) plot((double)index*0.004,data);
+        if(this.plotData) plot((double)index*xAxisIncrement,data);
+    }
+
+    void setxAxisIncrementFromSampleRate(int sampleRate) {
+        this.sampleRate = sampleRate;
+        setxAxisIncrement((double)1/(double)sampleRate);
+    }
+
+    private void setxAxisIncrement(double xAxisIncrement) {
+        this.xAxisIncrement = xAxisIncrement;
     }
 
     //Graph Stuff:

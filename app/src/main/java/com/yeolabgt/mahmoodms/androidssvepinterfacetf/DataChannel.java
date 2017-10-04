@@ -43,8 +43,8 @@ class DataChannel {
         this.packetCounter++;
     }
 
-    void addToGraphBuffer(GraphAdapter graphAdapter) {
-        for (int i = 0; i < this.dataBuffer.length / 3; i++) {
+    void addToGraphBuffer(GraphAdapter graphAdapter, int sampleRate) {
+        for (int i = 0; i < this.dataBuffer.length / 3; i+=sampleRate/250) {
             graphAdapter.addDataPoint(bytesToDouble(this.dataBuffer[3 * i], this.dataBuffer[3 * i + 1], this.dataBuffer[3 * i + 2]), this.totalDataPointsReceived - this.dataBuffer.length / 3 + i);
         }
         this.dataBuffer = null;
