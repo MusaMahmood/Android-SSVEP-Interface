@@ -361,8 +361,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             Log.e(TAG,"sampleRate: "+sampleRate+"Hz" );
             mGraphAdapterCh1.setxAxisIncrementFromSampleRate(sampleRate);
             mGraphAdapterCh2.setxAxisIncrementFromSampleRate(sampleRate);
-            mGraphAdapterCh1.setSeriesHistoryDataPoints(sampleRate*5);
-            mGraphAdapterCh1.setSeriesHistoryDataPoints(sampleRate*5);
+            mGraphAdapterCh1.setSeriesHistoryDataPoints(250*5);
+            mGraphAdapterCh2.setSeriesHistoryDataPoints(250*5);
 
             if (!fileSaveInitialized) {
                 try {
@@ -579,7 +579,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             if (mEEGConnected_2ch) {
                 mCh1.handleNewData(mNewEEGdataBytes);
                 if (mCh1.packetCounter == 6) {
-                    mCh1.addToGraphBuffer(mGraphAdapterCh1, sampleRate);
+                    mCh1.addToGraphBuffer(mGraphAdapterCh1);
                 }
             }
         }
@@ -594,7 +594,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             if (mEEGConnected_2ch) {
                 mCh2.handleNewData(mNewEEGdataBytes);
                 if (mCh2.packetCounter == 6) {
-                    mCh2.addToGraphBuffer(mGraphAdapterCh2, sampleRate);
+                    mCh2.addToGraphBuffer(mGraphAdapterCh2);
                 }
             }
         }

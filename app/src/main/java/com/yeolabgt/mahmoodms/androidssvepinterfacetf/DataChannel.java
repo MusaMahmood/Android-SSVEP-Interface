@@ -15,6 +15,7 @@ class DataChannel {
     private int totalDataPointsReceived;
     private byte[] dataBuffer;
 
+
     DataChannel(boolean chEnabled, boolean MSBFirst) {
         this.packetCounter = 0;
         this.totalDataPointsReceived = 0;
@@ -43,8 +44,8 @@ class DataChannel {
         this.packetCounter++;
     }
 
-    void addToGraphBuffer(GraphAdapter graphAdapter, int sampleRate) {
-        for (int i = 0; i < this.dataBuffer.length / 3; i+=sampleRate/250) {
+    void addToGraphBuffer(GraphAdapter graphAdapter) {
+        for (int i = 0; i < this.dataBuffer.length / 3; i+=graphAdapter.sampleRate/250) {
             graphAdapter.addDataPoint(bytesToDouble(this.dataBuffer[3 * i], this.dataBuffer[3 * i + 1], this.dataBuffer[3 * i + 2]), this.totalDataPointsReceived - this.dataBuffer.length / 3 + i);
         }
         this.dataBuffer = null;
