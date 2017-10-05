@@ -24,6 +24,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -40,6 +41,7 @@ import java.util.List;
 public class MainActivity extends Activity {
     private final static String TAG = DeviceControlActivity.class.getSimpleName();
     private boolean mScanning;
+    private boolean mRunTraining = false;
     private Handler mHandler;
     private BluetoothAdapter mBluetoothAdapter;
     private static final int MULTIPLE_PERMISSIONS_REQUEST = 139;
@@ -50,10 +52,10 @@ public class MainActivity extends Activity {
     private List<String> mDeviceAddressesMAC = new ArrayList<>();
     private List<String> mDeviceNames = new ArrayList<>();
     private int mDevicesSelectedCount = 0;
-
+    public final static String INTENT_TRAIN_BOOLEAN = "BOOLEAN_TO_PARSE";
     public final static String INTENT_DEVICES_KEY = "DEVICES_TO_PARSE";
     public final static String INTENT_DEVICES_NAMES = "DEVICE_NAMES_TO_PARSE";
-    public final static String INTENT_TRAINING_STIMULUS = "DELAY_VALUE_SECONDS";
+    public final static String INTENT_DELAY_VALUE_SECONDS = "DELAY_VALUE_SECONDS";
 
     EditText mEditDelayText;
 
@@ -135,7 +137,8 @@ public class MainActivity extends Activity {
                         final Intent intent = new Intent(MainActivity.this, DeviceControlActivity.class);
                         intent.putExtra(INTENT_DEVICES_KEY, selectedDeviceArray);
                         intent.putExtra(INTENT_DEVICES_NAMES, selectedDeviceNames);
-                        intent.putExtra(INTENT_TRAINING_STIMULUS, selectedStimulus);
+                        intent.putExtra(INTENT_DELAY_VALUE_SECONDS, selectedStimulus);
+                        intent.putExtra(INTENT_TRAIN_BOOLEAN,mRunTraining);
                         startActivity(intent);
                     } else {
                         Toast.makeText(MainActivity.this, "No Devices Selected!", Toast.LENGTH_SHORT).show();
@@ -169,6 +172,15 @@ public class MainActivity extends Activity {
             return false;
         }
         return true;
+    }
+
+    public void onCheckboxClicked(View view) {
+        boolean checked = ((CheckBox) view).isChecked();
+        switch (view.getId()) {
+            case R.id.trainingCheckbox:
+                mRunTraining = checked;
+                break;
+        }
     }
 
     @Override

@@ -17,7 +17,6 @@ import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.media.MediaPlayer;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -75,6 +74,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private String mDeviceName;
     private String mDeviceAddress;
     private boolean mConnected;
+    private boolean mRunTrainingBool;
     //Class instance variable
     private BluetoothLe mBluetoothLe;
     //Connecting to Multiple Devices
@@ -87,6 +87,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private int packetNumber_2ch = -1;
     private int mNumberOfClassifierCalls = 0;
     //Layout - TextViews and Buttons
+    private TextView mTrainingInstructions;
     private TextView mBatteryLevel;
     private TextView mDataRate;
     private TextView mSSVEPClassTextView;
@@ -95,6 +96,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private Switch mDomainSwitch;
     private long mLastTime;
     private int mPSDDataPointsToShow = 0;
+    int fPSDStartIndex = 0;
+    int fPSDEndIndex = 100;
     private boolean mFrequencyDomain = true;
     private int points = 0;
     private Menu menu;
@@ -106,6 +109,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private int batteryWarning = 20;//
     private double dataRate;
     private double mSSVEPClass = 0;
+    private double mStimulusDelaySeconds = 0;
     //Classification
     private boolean mWheelchairControl = false; //Default classifier.
     //Play Sound:
@@ -125,8 +129,11 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         final Intent intent = getIntent();
         deviceMacAddresses = intent.getStringArrayExtra(MainActivity.INTENT_DEVICES_KEY);
         String[] deviceDisplayNames = intent.getStringArrayExtra(MainActivity.INTENT_DEVICES_NAMES);
-        String[] intentStimulusClass = intent.getStringArrayExtra(MainActivity.INTENT_TRAINING_STIMULUS);
-        mSSVEPClass = Integer.valueOf(intentStimulusClass[0]);
+        String[] intentStimulusClass = intent.getStringArrayExtra(MainActivity.INTENT_DELAY_VALUE_SECONDS);
+        if(intent.getExtras()!=null) mRunTrainingBool = intent.getExtras().getBoolean(MainActivity.INTENT_TRAIN_BOOLEAN);
+        else Log.e(TAG,"ERROR: intent.getExtras = null");
+
+        mStimulusDelaySeconds = Integer.valueOf(intentStimulusClass[0]);
         mDeviceName = deviceDisplayNames[0];
         mDeviceAddress = deviceMacAddresses[0];
         Log.d(TAG, "Device Names: " + Arrays.toString(deviceDisplayNames));
@@ -144,6 +151,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         mExportButton = findViewById(R.id.button_export);
         mDomainSwitch = findViewById(R.id.domainSwitch);
         mBatteryLevel = findViewById(R.id.batteryText);
+        mTrainingInstructions = findViewById(R.id.trainingInstructions);
+        updateTrainingView(mRunTrainingBool);
         mDataRate = findViewById(R.id.dataRate);
         mDataRate.setText("...");
         mYfitTextView = findViewById(R.id.textViewYfit);
@@ -286,6 +295,9 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         double a[] = new double[1000]; Arrays.fill(a,0.0);
         double b[] = new double[1000]; Arrays.fill(b,0.0);
         jClassifySSVEP(a,b,2.28300);
+        double aa[] = new double[8000]; Arrays.fill(aa, 0.0);
+        double bb[] = new double[8000]; Arrays.fill(bb, 0.0);
+        jClassifySSVEP4k(aa,bb,2.278);
         if(redrawer!=null) {
             redrawer.start();
         }
@@ -598,7 +610,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             if (mEEGConnected_2ch) {
                 mCh1.handleNewData(mNewEEGdataBytes);
                 if (mCh1.packetCounter == 6) {
-                    mCh1.addToGraphBuffer(mGraphAdapterCh1);
+                    addToGraphBuffer(mCh1, mGraphAdapterCh1, true);
                 }
             }
         }
@@ -613,7 +625,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             if (mEEGConnected_2ch) {
                 mCh2.handleNewData(mNewEEGdataBytes);
                 if (mCh2.packetCounter == 6) {
-                    mCh2.addToGraphBuffer(mGraphAdapterCh2);
+                    addToGraphBuffer(mCh2, mGraphAdapterCh2, false);
                 }
             }
         }
@@ -628,8 +640,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             if (packetNumber_2ch % 10 == 0) { //Every x * 6 data points
                 Thread classifyTaskThread = new Thread(mClassifyTaskRunnableThread);
                 classifyTaskThread.start();
-//                ClassifyTask classifyTask = new ClassifyTask();
-//                classifyTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                 Log.e(TAG, "[" + String.valueOf(mNumberOfClassifierCalls + 1) + "] CALLING CLASSIFIER FUNCTION!");
             }
         }
@@ -643,8 +653,19 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         });
     }
 
-    int fPSDStartIndex = 0;
-    int fPSDEndIndex = 100;
+    void addToGraphBuffer(DataChannel dataChannel, GraphAdapter graphAdapter, boolean updateTrainingRoutine) {
+        for (int i = 0; i < dataChannel.dataBuffer.length / 3; i+=graphAdapter.sampleRate/250) {
+            graphAdapter.addDataPoint(DataChannel.bytesToDouble(dataChannel.dataBuffer[3 * i], dataChannel.dataBuffer[3 * i + 1], dataChannel.dataBuffer[3 * i + 2]), dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 3 + i);
+            if(updateTrainingRoutine) {
+                for (int j = 0; j < graphAdapter.sampleRate/250; j++) {
+                    updateTrainingRoutine(dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 3 + i+j);
+                }
+            }
+        }
+        dataChannel.dataBuffer = null;
+        dataChannel.packetCounter = 0;
+    }
+
     private Runnable mClassifyTaskRunnableThread = new Runnable() {
         @Override
         public void run() {
@@ -700,65 +721,137 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         }
     };
 
-    private class ClassifyTask extends AsyncTask<Void, Void, Double> {
-        @Override
-        protected Double doInBackground(Void... voids) {
-            if(mFrequencyDomain) {
-                double[] PSD2ch;
-                double[] PSDCh1 = new double[sampleRate];
-                double[] PSDCh2 = new double[sampleRate];
-                double[] getInstancePSD1 = new double[sampleRate*2];
-                double[] getInstancePSD2 = new double[sampleRate*2];
-                System.arraycopy(mGraphAdapterCh1.classificationBuffer, sampleRate*2, getInstancePSD1, 0, sampleRate*2);
-                System.arraycopy(mGraphAdapterCh2.classificationBuffer, sampleRate*2, getInstancePSD2, 0, sampleRate*2);
-                PSD2ch = jPSDExtraction(getInstancePSD1, getInstancePSD2, sampleRate); //250 Hz: For PSDA/each channel[0>sampleRate|sampleRate:end]
-                System.arraycopy(PSD2ch, 0, PSDCh1, 0, sampleRate);
-                System.arraycopy(PSD2ch, sampleRate, PSDCh2, 0, sampleRate);
+//    private class ClassifyTask extends AsyncTask<Void, Void, Double> {
+//        @Override
+//        protected Double doInBackground(Void... voids) {
+//            if(mFrequencyDomain) {
+//                double[] PSD2ch;
+//                double[] PSDCh1 = new double[sampleRate];
+//                double[] PSDCh2 = new double[sampleRate];
+//                double[] getInstancePSD1 = new double[sampleRate*2];
+//                double[] getInstancePSD2 = new double[sampleRate*2];
+//                System.arraycopy(mGraphAdapterCh1.classificationBuffer, sampleRate*2, getInstancePSD1, 0, sampleRate*2);
+//                System.arraycopy(mGraphAdapterCh2.classificationBuffer, sampleRate*2, getInstancePSD2, 0, sampleRate*2);
+//                PSD2ch = jPSDExtraction(getInstancePSD1, getInstancePSD2, sampleRate); //250 Hz: For PSDA/each channel[0>sampleRate|sampleRate:end]
+//                System.arraycopy(PSD2ch, 0, PSDCh1, 0, sampleRate);
+//                System.arraycopy(PSD2ch, sampleRate, PSDCh2, 0, sampleRate);
+//
+//                if (mPSDDataPointsToShow == 0) {
+//                    mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex;
+//                    mGraphAdapterCh1PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
+//                    mGraphAdapterCh2PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
+//                    if (mPSDDataPointsToShow > 64)
+//                        mFreqDomainPlotAdapter.setXyPlotDomainIncrement(6.0);
+//                    else mFreqDomainPlotAdapter.setXyPlotDomainIncrement(2.0);
+//                }
+//                mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD, PSDCh1, fPSDStartIndex, fPSDEndIndex);
+//                mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD, PSDCh2, fPSDStartIndex, fPSDEndIndex);
+//            }
+//
+//            double Y[];
+//            if (sampleRate==250) {
+//                double[] getInstance1 = mGraphAdapterCh1.classificationBuffer;
+//                double[] getInstance2 = mGraphAdapterCh2.classificationBuffer;
+//                Y = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
+//            } else if (sampleRate==4000) {
+//                //require last 8k pts:
+//                double[] getInstance1 = new double[sampleRate*2];
+//                double[] getInstance2 = new double[sampleRate*2];
+//                System.arraycopy(mGraphAdapterCh1.classificationBuffer, sampleRate*2, getInstance1, 0, sampleRate*2); //8000→end
+//                System.arraycopy(mGraphAdapterCh2.classificationBuffer, sampleRate*2, getInstance2, 0, sampleRate*2);
+//                Y = jClassifySSVEP4k(getInstance1, getInstance2, 1.5);
+//            } else {
+//                Y = new double[]{0.0,0.0} ;
+//            }
+//            Log.e(TAG, "Classifier Output: [#" + String.valueOf(mNumberOfClassifierCalls) + "::" + String.valueOf(Y[0]) + "," + String.valueOf(Y[1]) + "]");
+//            return Y[1];
+//        }
+//
+//        @Override
+//        protected void onPostExecute(Double Y) {
+//            mNumberOfClassifierCalls++;
+//            final String s = "SSVEP cPSDA\n: [" + String.valueOf(Y) + "]";
+//            runOnUiThread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    mYfitTextView.setText(s);
+//                }
+//            });
+//            executeWheelchairCommand((int) (double) Y);
+//            super.onPostExecute(Y);
+//        }
+//    }
 
-                if (mPSDDataPointsToShow == 0) {
-                    mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex;
-                    mGraphAdapterCh1PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
-                    mGraphAdapterCh2PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
-                    if (mPSDDataPointsToShow > 64)
-                        mFreqDomainPlotAdapter.setXyPlotDomainIncrement(6.0);
-                    else mFreqDomainPlotAdapter.setXyPlotDomainIncrement(2.0);
-                }
-                mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD, PSDCh1, fPSDStartIndex, fPSDEndIndex);
-                mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD, PSDCh2, fPSDStartIndex, fPSDEndIndex);
+    private void updateTrainingRoutine(int dataPoints) {
+        if (dataPoints % sampleRate == 0 && mRunTrainingBool) {
+            int second = dataPoints / sampleRate;
+            int mSDS = (int) mStimulusDelaySeconds;
+            //TODO: REMEMBER TO CHANGE mEMGClass
+            int eventSecondCountdown = 0;
+            if (second >= 0 && second < mSDS) {
+                eventSecondCountdown = mSDS - second;
+                updateTrainingPrompt("EYES CLOSED");
+                updateTrainingPromptColor(Color.GREEN);
+                mSSVEPClass = 0;
+            } else if (second >= mSDS && second < 2*mSDS) {
+                eventSecondCountdown = 2*mSDS - second;
+                updateTrainingPrompt("15.15Hz");
+                mSSVEPClass = 1;
+            } else if (second >= 2*mSDS && second < 3*mSDS) {
+                eventSecondCountdown = 3*mSDS - second;
+                updateTrainingPrompt("16.67hz");
+                mSSVEPClass = 2;
+            } else if (second >= 3*mSDS && second < 4*mSDS) {
+                eventSecondCountdown = 4*mSDS - second;
+                updateTrainingPrompt("18.51Hz");
+                mSSVEPClass = 3;
+            } else if (second >= 4*mSDS && second < 5*mSDS) {
+                eventSecondCountdown = 5*mSDS - second;
+                updateTrainingPrompt("20.00Hz");
+                mSSVEPClass = 4;
+            } else if (second >= 5*mSDS && second < 6*mSDS) {
+                eventSecondCountdown = 6*mSDS - second;
+                updateTrainingPrompt("Stop!");
+                updateTrainingPromptColor(Color.RED);
+                mSSVEPClass = 0;
+                disconnectAllBLE();
             }
-
-            double Y[];
-            if (sampleRate==250) {
-                double[] getInstance1 = mGraphAdapterCh1.classificationBuffer;
-                double[] getInstance2 = mGraphAdapterCh2.classificationBuffer;
-                Y = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
-            } else if (sampleRate==4000) {
-                //require last 8k pts:
-                double[] getInstance1 = new double[sampleRate*2];
-                double[] getInstance2 = new double[sampleRate*2];
-                System.arraycopy(mGraphAdapterCh1.classificationBuffer, sampleRate*2, getInstance1, 0, sampleRate*2); //8000→end
-                System.arraycopy(mGraphAdapterCh2.classificationBuffer, sampleRate*2, getInstance2, 0, sampleRate*2);
-                Y = jClassifySSVEP4k(getInstance1, getInstance2, 1.5);
-            } else {
-                Y = new double[]{0.0,0.0} ;
+            if (eventSecondCountdown == 10) {
+                mMediaBeep.start();
             }
-            Log.e(TAG, "Classifier Output: [#" + String.valueOf(mNumberOfClassifierCalls) + "::" + String.valueOf(Y[0]) + "," + String.valueOf(Y[1]) + "]");
-            return Y[1];
         }
+    }
 
-        @Override
-        protected void onPostExecute(Double Y) {
-            mNumberOfClassifierCalls++;
-            final String s = "SSVEP cPSDA\n: [" + String.valueOf(Y) + "]";
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mYfitTextView.setText(s);
+    private void updateTrainingPrompt(final String prompt) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mRunTrainingBool) {
+                    mTrainingInstructions.setText(prompt);
                 }
-            });
-            executeWheelchairCommand((int) (double) Y);
-            super.onPostExecute(Y);
-        }
+            }
+        });
+    }
+
+    private void updateTrainingView(final boolean b) {
+        final int visibility = (b)? View.VISIBLE : View.GONE;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mTrainingInstructions.setVisibility(visibility);
+            }
+        });
+    }
+
+    private void updateTrainingPromptColor(final int color) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mRunTrainingBool) {
+                    mTrainingInstructions.setTextColor(color);
+                }
+            }
+        });
     }
 
     private void executeWheelchairCommand(int command) {
