@@ -57,7 +57,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     // Graphing Variables:
     private GraphAdapter mGraphAdapterCh1;
     private GraphAdapter mGraphAdapterCh2;
-    private GraphAdapter mGraphAdaptercPSDA;
+//    private GraphAdapter mGraphAdaptercPSDA;
     private GraphAdapter mGraphAdapterCh1PSDA;
     private GraphAdapter mGraphAdapterCh2PSDA;
     public XYPlotAdapter mTimeDomainPlotAdapter;
@@ -155,17 +155,17 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         mGraphAdapterCh2 = new GraphAdapter(1000, "EEG Data Ch 2", false, Color.RED, 1000); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
         //Initialize Bluetooth
         initializeBluetoothArray();
-        mGraphAdaptercPSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (conv)", false, Color.BLACK, 0);
+//        mGraphAdaptercPSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (conv)", false, Color.BLACK, 0);
         mGraphAdapterCh1PSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (Ch1)", false, Color.BLUE, 0);
         mGraphAdapterCh2PSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (Ch2)", false, Color.RED, 0);
         //PLOT CH1 By default
         mGraphAdapterCh1.plotData = true;
-        mGraphAdaptercPSDA.plotData = true;
+//        mGraphAdaptercPSDA.plotData = true;
         mGraphAdapterCh1PSDA.plotData = true;
         mGraphAdapterCh2PSDA.plotData = true;
         mGraphAdapterCh1.setPointWidth((float) 2);
         mGraphAdapterCh2.setPointWidth((float) 2);
-        mGraphAdaptercPSDA.setPointWidth((float) 2);
+//        mGraphAdaptercPSDA.setPointWidth((float) 2);
         mGraphAdapterCh1PSDA.setPointWidth((float) 2);
         mGraphAdapterCh2PSDA.setPointWidth((float) 2);
         mTimeDomainPlotAdapter = new XYPlotAdapter(findViewById(R.id.eegTimeDomainXYPlot), false, 1000);
@@ -235,7 +235,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 mGraphAdapterCh1PSDA.setPlotData(b);
                 mGraphAdapterCh2PSDA.setPlotData(b);
-                mGraphAdaptercPSDA.setPlotData(b);
+//                mGraphAdaptercPSDA.setPlotData(b);
             }
         });
         Button resetButton = findViewById(R.id.resetActivityButton);
@@ -355,12 +355,23 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             }
             if(mBluetoothDeviceArray[i].getName().toLowerCase().contains("4k".toLowerCase())) {
                 sampleRate = 4000;
+                fPSDStartIndex = 120;
+                fPSDEndIndex = 245;
+            } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("2k".toLowerCase())) {
+                sampleRate = 2000;
+            } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("1k".toLowerCase())) {
+                sampleRate = 1000;
+            } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("500".toLowerCase())) {
+                sampleRate = 500;
             } else {
                 sampleRate = 250;
+                fPSDStartIndex = 16;
+                fPSDEndIndex = 80;
             }
             Log.e(TAG,"sampleRate: "+sampleRate+"Hz" );
             mGraphAdapterCh1.setxAxisIncrementFromSampleRate(sampleRate);
             mGraphAdapterCh2.setxAxisIncrementFromSampleRate(sampleRate);
+
             mGraphAdapterCh1.setSeriesHistoryDataPoints(250*5);
             mGraphAdapterCh2.setSeriesHistoryDataPoints(250*5);
 
@@ -548,7 +559,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         Log.i(TAG, "onCharacteristicRead");
         if (status == BluetoothGatt.GATT_SUCCESS) {
             if (AppConstant.CHAR_BATTERY_LEVEL.equals(characteristic.getUuid())) {
-//                byte[] a = characteristic.getValue();
                 batteryLevel = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
                 updateBatteryStatus(batteryLevel);
                 Log.i(TAG, "Battery Level :: " + batteryLevel);
@@ -607,11 +617,9 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 writeToDisk24(mCh1.characteristicDataPacketBytes, mCh2.characteristicDataPacketBytes);
             }
             if (packetNumber_2ch % 10 == 0) { //Every x * 6 data points
-//                ClassifyTask classifyTask = new ClassifyTask();
                 Thread classifyTaskThread = new Thread(mClassifyTaskRunnableThread);
                 classifyTaskThread.start();
                 Log.e(TAG, "[" + String.valueOf(mNumberOfClassifierCalls + 1) + "] CALLING CLASSIFIER FUNCTION!");
-//                classifyTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
             }
         }
 
@@ -624,16 +632,16 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         });
     }
 
+    int fPSDStartIndex = 0;
+    int fPSDEndIndex = 0;
     private Runnable mClassifyTaskRunnableThread = new Runnable() {
         @Override
         public void run() {
-            final int fPSDStartIndex = 16;
-            final int fPSDEndIndex = 80;
             double[] getInstance1 = mGraphAdapterCh1.classificationBuffer;
             double[] getInstance2 = mGraphAdapterCh2.classificationBuffer;
-            double[] pPSDCh1 = new double[250];
-            double[] pPSDCh2 = new double[250];
-            if (mFrequencyDomain) {
+            if(sampleRate == 250 && mFrequencyDomain) {
+                double[] pPSDCh1 = new double[250];
+                double[] pPSDCh2 = new double[250];
                 double[] getInstancePSD1 = new double[500];
                 double[] getInstancePSD2 = new double[500];
                 System.arraycopy(mGraphAdapterCh1.classificationBuffer, 500, getInstancePSD1, 0, 500);
@@ -643,54 +651,38 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 System.arraycopy(pPSD2ch, 250, pPSDCh2, 0, 250);
                 if (mPSDDataPointsToShow == 0) {
                     mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex;
-                    int mcPSDDataPointsToShow = 176 - 34;
+//                    int mcPSDDataPointsToShow = 176 - 34;
                     mGraphAdapterCh1PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
                     mGraphAdapterCh2PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
-                    mGraphAdaptercPSDA.setSeriesHistoryDataPoints(mcPSDDataPointsToShow);
+//                    mGraphAdaptercPSDA.setSeriesHistoryDataPoints(mcPSDDataPointsToShow);
                     if (mPSDDataPointsToShow > 64)
                         mFreqDomainPlotAdapter.setXyPlotDomainIncrement(6.0);
                     else mFreqDomainPlotAdapter.setXyPlotDomainIncrement(2.0);
                 }
+                double Y[] = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
+//                double cPSD[] = new double[499];
+//                System.arraycopy(Y, 2, cPSD, 0, 499);
+//                mGraphAdaptercPSDA.addDataPointsGeneric(fPSD, cPSD, 34, 176);
+                mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD2ch, pPSDCh1, fPSDStartIndex, fPSDEndIndex);
+                mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD2ch, pPSDCh2, fPSDStartIndex, fPSDEndIndex);
+                mNumberOfClassifierCalls++;
+                Log.e(TAG, "Classifier Output: [#" + String.valueOf(mNumberOfClassifierCalls) + "::" + String.valueOf(Y[0]) + "," + String.valueOf(Y[1]) + "]");
+                final String s = "SSVEP cPSDA\n: [" + String.valueOf(Y[1]) + "]";
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mYfitTextView.setText(s);
+                    }
+                });
+                executeWheelchairCommand((int) (double) Y[1]);
+            } else {
+                double[] pPSDCh1 = new double[250];
+                double[] pPSDCh2 = new double[250];
+                double[] getInstancePSD1 = new double[500];
+                double[] getInstancePSD2 = new double[500];
             }
-            double Y[] = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
-            double cPSD[] = new double[499];
-            System.arraycopy(Y, 2, cPSD, 0, 499);
-            mGraphAdaptercPSDA.addDataPointsGeneric(fPSD, cPSD, 34, 176);
-            mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD2ch, pPSDCh1, fPSDStartIndex, fPSDEndIndex);
-            mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD2ch, pPSDCh2, fPSDStartIndex, fPSDEndIndex);
-            mNumberOfClassifierCalls++;
-            Log.e(TAG, "Classifier Output: [#" + String.valueOf(mNumberOfClassifierCalls) + "::" + String.valueOf(Y[0]) + "," + String.valueOf(Y[1]) + "]");
-//            return Y[1];
-            final String s = "SSVEP cPSDA\n: [" + String.valueOf(Y[1]) + "]";
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mYfitTextView.setText(s);
-                }
-            });
-            executeWheelchairCommand((int) (double) Y[1]);
         }
     };
-
-//    private class ClassifyTask extends AsyncTask<Void, Void, Double> {
-//        @Override
-//        protected Double doInBackground(Void... voids) {
-//              return 0.0;
-//        }
-//
-//        @Override
-//        protected void onPostExecute(Double predictedClass) {
-//            final String s = "SSVEP cPSDA\n: [" + String.valueOf(predictedClass) + "]";
-//            runOnUiThread(new Runnable() {
-//                @Override
-//                public void run() {
-//                    mYfitTextView.setText(s);
-//                }
-//            });
-//            executeWheelchairCommand((int) (double) predictedClass);
-//            super.onPostExecute(predictedClass);
-//        }
-//    }
 
     private void executeWheelchairCommand(int command) {
         byte[] bytes = new byte[1];
