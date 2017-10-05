@@ -31,6 +31,7 @@ add_library( # Sets the name of the library.
                 src/main/cpp/extractPowerSpectrum.cpp
                 src/main/cpp/extractPowerSpectrum_emxutil.cpp
                 src/main/cpp/classifySSVEP.cpp
+                src/main/cpp/classifySSVEP_4k.cpp
                 # Executor
                 src/main/cpp/jniExecutor.cpp
 
