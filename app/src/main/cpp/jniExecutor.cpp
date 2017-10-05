@@ -5,6 +5,7 @@
 #include "rt_nonfinite.h"
 #include "classifySSVEP.h"
 #include "extractPowerSpectrum2ch.h"
+#include "extractPowerSpectrum.h"
 /*Additional Includes*/
 #include <jni.h>
 #include <android/log.h>
@@ -33,30 +34,25 @@ Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jClass
 
 extern "C" {
 JNIEXPORT jdoubleArray JNICALL
-Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jPSDExtraction2ch(
-        JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2) {
+Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jPSDExtraction(
+        JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2, jint sampleRate) {
     jdouble *X1 = env->GetDoubleArrayElements(ch1, NULL);
     jdouble *X2 = env->GetDoubleArrayElements(ch2, NULL);
     if (X1 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
     if (X2 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
-    jdoubleArray m_result = env->NewDoubleArray(500);
-    double Y[500];
-    extractPowerSpectrum2ch(X1, X2, Y);
-    env->SetDoubleArrayRegion(m_result, 0, 500, Y);
-    return m_result;
-}
-}
-
-extern "C" {
-JNIEXPORT jdoubleArray JNICALL
-Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jLoadfPSD(
-        JNIEnv *env, jobject jobject1) {
-    jdoubleArray m_result = env->NewDoubleArray(499);
-    double fPSD[499];
-    for (int i = 0; i < 499; i++) {
-        fPSD[i] = (double)i * 250.0 / 998.0;
-    }
-    env->SetDoubleArrayRegion(m_result, 0, 499, fPSD);
+    jdoubleArray m_result = env->NewDoubleArray(sampleRate*2);
+//    if(sampleRate==250) {
+//        double Y[sampleRate*2];
+//        extractPowerSpectrum2ch(X1, X2, Y);
+//        env->SetDoubleArrayRegion(m_result, 0, sampleRate*2, Y);
+//    } else {
+//
+//    }
+    int size_array = sampleRate*2; //2s of data (X1 and X2)
+    double Y[sampleRate*2];
+    int PSD_size[2];
+    extractPowerSpectrum(X1, &size_array, X2, &size_array, sampleRate, &Y[0], PSD_size);
+    env->SetDoubleArrayRegion(m_result, 0, sampleRate*2, Y);
     return m_result;
 }
 }
@@ -69,14 +65,14 @@ JNIEXPORT jdoubleArray JNICALL
  * @param jobject1
  * @return array of frequencies (Hz) corresponding to a raw input signal.
  */
-Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jLoadfPSD2ch(
-        JNIEnv *env, jobject jobject1) {
-    jdoubleArray m_result = env->NewDoubleArray(250);
-    double fPSD[250];
-    for (int i = 0; i < 250; i++) {
-        fPSD[i] = (double)i * 250.0 / 500;
+Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jLoadfPSD(
+        JNIEnv *env, jobject jobject1, jint sampleRate) {
+    jdoubleArray m_result = env->NewDoubleArray(sampleRate);
+    double fPSD[sampleRate];
+    for (int i = 0; i < sampleRate; i++) {
+        fPSD[i] = (double)i * (double)sampleRate / (double) (sampleRate*2);
     }
-    env->SetDoubleArrayRegion(m_result, 0, 250, fPSD);
+    env->SetDoubleArrayRegion(m_result, 0, sampleRate, fPSD);
     return m_result;
 }
 }
@@ -88,6 +84,7 @@ Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jmainI
     if (!(bool) terminate) {
         classifySSVEP_initialize();
         extractPowerSpectrum2ch_initialize();
+        extractPowerSpectrum_initialize();
         return 0;
     } else {
         return -1;

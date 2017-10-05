@@ -28,6 +28,8 @@ add_library( # Sets the name of the library.
 
                 # Main C++ Data Processing Files
                 src/main/cpp/extractPowerSpectrum2ch.cpp
+                src/main/cpp/extractPowerSpectrum.cpp
+                src/main/cpp/extractPowerSpectrum_emxutil.cpp
                 src/main/cpp/classifySSVEP.cpp
                 # Executor
                 src/main/cpp/jniExecutor.cpp
