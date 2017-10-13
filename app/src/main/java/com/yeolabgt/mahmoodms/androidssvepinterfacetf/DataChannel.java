@@ -15,7 +15,6 @@ class DataChannel {
     int totalDataPointsReceived;
     byte[] dataBuffer;
 
-
     DataChannel(boolean chEnabled, boolean MSBFirst) {
         this.packetCounter = 0;
         this.totalDataPointsReceived = 0;
@@ -52,6 +51,17 @@ class DataChannel {
 //        this.packetCounter = 0;
 //    }
 
+    static double bytesToDouble(byte a1, byte a2) {
+        int unsigned;
+        if (MSBFirst) {
+            unsigned = unsignedBytesToInt(a2, a1);
+        } else {
+            unsigned = unsignedBytesToInt(a1, a2);
+        }
+        return ((double) unsignedToSigned16bit(unsigned) / 32767.0) * 2.25;
+    }
+
+
     static double bytesToDouble(byte a1, byte a2, byte a3) {
         int unsigned;
         if (MSBFirst) {
@@ -62,8 +72,16 @@ class DataChannel {
         return ((double) unsignedToSigned24bit(unsigned) / 8388607.0) * 2.25;
     }
 
+    private static int unsignedToSigned16bit(int unsigned) {
+        if ((unsigned & 0x7FFF) != 0) return -1 * (0x7FFF - (unsigned & (0x7FFF - 1))); else return unsigned;
+    }
+
     private static int unsignedToSigned24bit(int unsigned) {
         if ((unsigned & 0x7FFFFF) != 0) return -1 * (0x7FFFFF - (unsigned & (0x7FFFFF - 1))); else return unsigned;
+    }
+
+    private static int unsignedBytesToInt(byte b0, byte b1) {
+        return (unsignedByteToInt(b0) + (unsignedByteToInt(b1) << 8));
     }
 
     private static int unsignedBytesToInt(byte b0, byte b1, byte b2) {

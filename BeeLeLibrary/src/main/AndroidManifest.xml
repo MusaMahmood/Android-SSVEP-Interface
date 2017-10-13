@@ -7,6 +7,5 @@
         android:required="true" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <!--<uses-sdk android:minSdkVersion="18" />-->
     <application />
 </manifest>

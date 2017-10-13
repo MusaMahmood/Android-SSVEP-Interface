@@ -57,7 +57,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     // Graphing Variables:
     private GraphAdapter mGraphAdapterCh1;
     private GraphAdapter mGraphAdapterCh2;
-//    private GraphAdapter mGraphAdaptercPSDA;
     private GraphAdapter mGraphAdapterCh1PSDA;
     private GraphAdapter mGraphAdapterCh2PSDA;
     public XYPlotAdapter mTimeDomainPlotAdapter;
@@ -98,6 +97,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private int mPSDDataPointsToShow = 0;
     int fPSDStartIndex = 0;
     int fPSDEndIndex = 100;
+    private int byteResolution = 3;
     private boolean mFrequencyDomain = true;
     private int points = 0;
     private Menu menu;
@@ -130,8 +130,9 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         deviceMacAddresses = intent.getStringArrayExtra(MainActivity.INTENT_DEVICES_KEY);
         String[] deviceDisplayNames = intent.getStringArrayExtra(MainActivity.INTENT_DEVICES_NAMES);
         String[] intentStimulusClass = intent.getStringArrayExtra(MainActivity.INTENT_DELAY_VALUE_SECONDS);
-        if(intent.getExtras()!=null) mRunTrainingBool = intent.getExtras().getBoolean(MainActivity.INTENT_TRAIN_BOOLEAN);
-        else Log.e(TAG,"ERROR: intent.getExtras = null");
+        if (intent.getExtras() != null)
+            mRunTrainingBool = intent.getExtras().getBoolean(MainActivity.INTENT_TRAIN_BOOLEAN);
+        else Log.e(TAG, "ERROR: intent.getExtras = null");
 
         mStimulusDelaySeconds = Integer.valueOf(intentStimulusClass[0]);
         mDeviceName = deviceDisplayNames[0];
@@ -213,14 +214,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 mGraphAdapterCh2PSDA.setPlotData(b);
             }
         });
-        ToggleButton ch3 = findViewById(R.id.toggleButtonCh3);
-        ch3.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-
-//                mGraphAdaptercPSDA.setPlotData(b);
-            }
-        });
         Button resetButton = findViewById(R.id.resetActivityButton);
         resetButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -258,7 +251,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     public void saveDataFile() throws IOException {
         File root = Environment.getExternalStorageDirectory();
 //        String fileTimeStamp = "EEG_SSVEPData_" + getTimeStamp() + "_" + String.valueOf((int) mSSVEPClass);
-        String fileTimeStamp = "EEG_SSVEPData_" + getTimeStamp() + "_" + String.valueOf(sampleRate)+"Hz";
+        String fileTimeStamp = "EEG_SSVEPData_" + getTimeStamp() + "_" + String.valueOf(sampleRate) + "Hz";
         Log.e(TAG, "fileTimeStamp: " + fileTimeStamp);
         if (root.canWrite()) {
             File dir = new File(root.getAbsolutePath() + "/EEGData");
@@ -292,13 +285,17 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     public void onResume() {
         makeFilterSwitchVisible(true);
         jmainInitialization(false);
-        double a[] = new double[1000]; Arrays.fill(a,0.0);
-        double b[] = new double[1000]; Arrays.fill(b,0.0);
-        jClassifySSVEP(a,b,2.28300);
-        double aa[] = new double[8000]; Arrays.fill(aa, 0.0);
-        double bb[] = new double[8000]; Arrays.fill(bb, 0.0);
-        jClassifySSVEP4k(aa,bb,2.278);
-        if(redrawer!=null) {
+        double a[] = new double[1000];
+        Arrays.fill(a, 0.0);
+        double b[] = new double[1000];
+        Arrays.fill(b, 0.0);
+        jClassifySSVEP(a, b, 2.28300);
+        double aa[] = new double[8000];
+        Arrays.fill(aa, 0.0);
+        double bb[] = new double[8000];
+        Arrays.fill(bb, 0.0);
+        jClassifySSVEP4k(aa, bb, 2.278);
+        if (redrawer != null) {
             redrawer.start();
         }
         super.onResume();
@@ -306,7 +303,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
 
     @Override
     protected void onPause() {
-        if(redrawer!=null) redrawer.pause();
+        if (redrawer != null) redrawer.pause();
         makeFilterSwitchVisible(false);
         super.onPause();
     }
@@ -316,7 +313,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         BluetoothDevice[] mBluetoothDeviceArray = new BluetoothDevice[deviceMacAddresses.length];
         mBluetoothGattArray = new BluetoothGatt[deviceMacAddresses.length];
         Log.d(TAG, "Device Addresses: " + Arrays.toString(deviceMacAddresses));
-        if (deviceMacAddresses != null && mBluetoothManager!=null) {
+        if (deviceMacAddresses != null && mBluetoothManager != null) {
             for (int i = 0; i < deviceMacAddresses.length; i++) {
                 mBluetoothDeviceArray[i] = mBluetoothManager.getAdapter().getRemoteDevice(deviceMacAddresses[i]);
             }
@@ -339,32 +336,36 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("nRF52".toLowerCase())) {
                 mMSBFirst = true;
             }
-            if(mBluetoothDeviceArray[i].getName().toLowerCase().contains("4k".toLowerCase())) {
+            if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("8k".toLowerCase())) {
+                sampleRate = 8000;
+                byteResolution = 2; //FOR ECG ONLY
+            } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("4k".toLowerCase())) {
                 sampleRate = 4000;
-                fPSDStartIndex = 16;
-                fPSDEndIndex = 80;
+                byteResolution = 3;
             } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("2k".toLowerCase())) {
                 sampleRate = 2000;
+                byteResolution = 3;
             } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("1k".toLowerCase())) {
                 sampleRate = 1000;
+                byteResolution = 3;
             } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("500".toLowerCase())) {
                 sampleRate = 500;
+                byteResolution = 3;
             } else {
                 sampleRate = 250;
-                fPSDStartIndex = 16;
-                fPSDEndIndex = 80;
             }
-            Log.e(TAG,"sampleRate: "+sampleRate+"Hz" );
+            fPSDStartIndex = 16;
+            fPSDEndIndex = 80;
+            Log.e(TAG, "sampleRate: " + sampleRate + "Hz");
             fPSD = jLoadfPSD(sampleRate);
-//            Log.e(TAG, "fPSDSize"+String.valueOf(fPSD.length));
 
             setupGraph();
 
             mGraphAdapterCh1.setxAxisIncrementFromSampleRate(sampleRate);
             mGraphAdapterCh2.setxAxisIncrementFromSampleRate(sampleRate);
 
-            mGraphAdapterCh1.setSeriesHistoryDataPoints(250*5);
-            mGraphAdapterCh2.setSeriesHistoryDataPoints(250*5);
+            mGraphAdapterCh1.setSeriesHistoryDataPoints(250 * 5);
+            mGraphAdapterCh2.setSeriesHistoryDataPoints(250 * 5);
 
             if (!fileSaveInitialized) {
                 try {
@@ -378,28 +379,24 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
 
     private void setupGraph() {
         // Initialize our XYPlot reference:
-        mGraphAdapterCh1 = new GraphAdapter(sampleRate*4, "EEG Data Ch 1", false, Color.BLUE, sampleRate*4); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
-        mGraphAdapterCh2 = new GraphAdapter(sampleRate*4, "EEG Data Ch 2", false, Color.RED, sampleRate*4); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
-//        mGraphAdaptercPSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (conv)", false, Color.BLACK, 0);
+        mGraphAdapterCh1 = new GraphAdapter(sampleRate * 4, "EEG Data Ch 1", false, Color.BLUE, sampleRate * 4); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
+        mGraphAdapterCh2 = new GraphAdapter(sampleRate * 4, "EEG Data Ch 2", false, Color.RED, sampleRate * 4); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
         mGraphAdapterCh1PSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (Ch1)", false, Color.BLUE, 0);
         mGraphAdapterCh2PSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (Ch2)", false, Color.RED, 0);
         //PLOT CH1 By default
         mGraphAdapterCh1.plotData = true;
-//        mGraphAdaptercPSDA.plotData = true;
         mGraphAdapterCh1PSDA.plotData = true;
         mGraphAdapterCh2PSDA.plotData = true;
         mGraphAdapterCh1.setPointWidth((float) 2);
         mGraphAdapterCh2.setPointWidth((float) 2);
-//        mGraphAdaptercPSDA.setPointWidth((float) 2);
         mGraphAdapterCh1PSDA.setPointWidth((float) 2);
         mGraphAdapterCh2PSDA.setPointWidth((float) 2);
         mTimeDomainPlotAdapter = new XYPlotAdapter(findViewById(R.id.eegTimeDomainXYPlot), false, 1000);
         mTimeDomainPlotAdapter.xyPlot.addSeries(mGraphAdapterCh1.series, mGraphAdapterCh1.lineAndPointFormatter);
         mTimeDomainPlotAdapter.xyPlot.addSeries(mGraphAdapterCh2.series, mGraphAdapterCh2.lineAndPointFormatter);
-        mFreqDomainPlotAdapter = new XYPlotAdapter(findViewById(R.id.frequencyAnalysisXYPlot), "Frequency (Hz)", "Power Density (W/Hz)", ((double)sampleRate/125.0));
+        mFreqDomainPlotAdapter = new XYPlotAdapter(findViewById(R.id.frequencyAnalysisXYPlot), "Frequency (Hz)", "Power Density (W/Hz)", ((double) sampleRate / 125.0));
         mFreqDomainPlotAdapter.xyPlot.addSeries(mGraphAdapterCh1PSDA.series, mGraphAdapterCh1PSDA.lineAndPointFormatter);
         mFreqDomainPlotAdapter.xyPlot.addSeries(mGraphAdapterCh2PSDA.series, mGraphAdapterCh2PSDA.lineAndPointFormatter);
-//        mFreqDomainPlotAdapter.xyPlot.addSeries(mGraphAdaptercPSDA.series, mGraphAdaptercPSDA.lineAndPointFormatter);
 
         redrawer = new Redrawer(
                 Arrays.asList(new Plot[]{mTimeDomainPlotAdapter.xyPlot, mFreqDomainPlotAdapter.xyPlot}), 60, false);
@@ -597,7 +594,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         }
         //TODO: ADD BATTERY MEASURE CAPABILITY IN FIRMWARE: (ble_ADC); Copy from onCharacteristicRead
         if (AppConstant.CHAR_BATTERY_LEVEL.equals(characteristic.getUuid())) {
-            int batteryLevel = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8,0);
+            int batteryLevel = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
             updateBatteryStatus(batteryLevel);
         }
 
@@ -654,11 +651,22 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     }
 
     void addToGraphBuffer(DataChannel dataChannel, GraphAdapter graphAdapter, boolean updateTrainingRoutine) {
-        for (int i = 0; i < dataChannel.dataBuffer.length / 3; i+=graphAdapter.sampleRate/250) {
-            graphAdapter.addDataPoint(DataChannel.bytesToDouble(dataChannel.dataBuffer[3 * i], dataChannel.dataBuffer[3 * i + 1], dataChannel.dataBuffer[3 * i + 2]), dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 3 + i);
-            if(updateTrainingRoutine) {
-                for (int j = 0; j < graphAdapter.sampleRate/250; j++) {
-                    updateTrainingRoutine(dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 3 + i+j);
+        if (byteResolution == 3) {
+            for (int i = 0; i < dataChannel.dataBuffer.length / 3; i += graphAdapter.sampleRate / 250) {
+                graphAdapter.addDataPoint(DataChannel.bytesToDouble(dataChannel.dataBuffer[3 * i], dataChannel.dataBuffer[3 * i + 1], dataChannel.dataBuffer[3 * i + 2]), dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 3 + i);
+                if (updateTrainingRoutine) {
+                    for (int j = 0; j < graphAdapter.sampleRate / 250; j++) {
+                        updateTrainingRoutine(dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 3 + i + j);
+                    }
+                }
+            }
+        } else if (byteResolution == 2) {
+            for (int i = 0; i < dataChannel.dataBuffer.length / 2; i += graphAdapter.sampleRate / 250) {
+                graphAdapter.addDataPoint(DataChannel.bytesToDouble(dataChannel.dataBuffer[2 * i], dataChannel.dataBuffer[2 * i + 1]), dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 2 + i);
+                if (updateTrainingRoutine) {
+                    for (int j = 0; j < graphAdapter.sampleRate / 250; j++) {
+                        updateTrainingRoutine(dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 2 + i + j);
+                    }
                 }
             }
         }
@@ -669,14 +677,14 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private Runnable mClassifyTaskRunnableThread = new Runnable() {
         @Override
         public void run() {
-            if(mFrequencyDomain) {
+            if (mFrequencyDomain) {
                 double[] PSD2ch;
                 double[] PSDCh1 = new double[sampleRate];
                 double[] PSDCh2 = new double[sampleRate];
-                double[] getInstancePSD1 = new double[sampleRate*2];
-                double[] getInstancePSD2 = new double[sampleRate*2];
-                System.arraycopy(mGraphAdapterCh1.classificationBuffer, sampleRate*2, getInstancePSD1, 0, sampleRate*2);
-                System.arraycopy(mGraphAdapterCh2.classificationBuffer, sampleRate*2, getInstancePSD2, 0, sampleRate*2);
+                double[] getInstancePSD1 = new double[sampleRate * 2];
+                double[] getInstancePSD2 = new double[sampleRate * 2];
+                System.arraycopy(mGraphAdapterCh1.classificationBuffer, sampleRate * 2, getInstancePSD1, 0, sampleRate * 2);
+                System.arraycopy(mGraphAdapterCh2.classificationBuffer, sampleRate * 2, getInstancePSD2, 0, sampleRate * 2);
                 PSD2ch = jPSDExtraction(getInstancePSD1, getInstancePSD2, sampleRate); //250 Hz: For PSDA/each channel[0>sampleRate|sampleRate:end]
                 System.arraycopy(PSD2ch, 0, PSDCh1, 0, sampleRate);
                 System.arraycopy(PSD2ch, sampleRate, PSDCh2, 0, sampleRate);
@@ -694,19 +702,19 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             }
 
             double Y[];
-            if (sampleRate==250) {
+            if (sampleRate == 250) {
                 double[] getInstance1 = mGraphAdapterCh1.classificationBuffer;
                 double[] getInstance2 = mGraphAdapterCh2.classificationBuffer;
                 Y = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
-            } else if (sampleRate==4000) {
+            } else if (sampleRate == 4000) {
                 //require last 8k pts:
-                double[] getInstance1 = new double[sampleRate*2];
-                double[] getInstance2 = new double[sampleRate*2];
-                System.arraycopy(mGraphAdapterCh1.classificationBuffer, sampleRate*2, getInstance1, 0, sampleRate*2); //8000→end
-                System.arraycopy(mGraphAdapterCh2.classificationBuffer, sampleRate*2, getInstance2, 0, sampleRate*2);
+                double[] getInstance1 = new double[sampleRate * 2];
+                double[] getInstance2 = new double[sampleRate * 2];
+                System.arraycopy(mGraphAdapterCh1.classificationBuffer, sampleRate * 2, getInstance1, 0, sampleRate * 2); //8000→end
+                System.arraycopy(mGraphAdapterCh2.classificationBuffer, sampleRate * 2, getInstance2, 0, sampleRate * 2);
                 Y = jClassifySSVEP4k(getInstance1, getInstance2, 1.5);
             } else {
-                Y = new double[]{0.0,0.0} ;
+                Y = new double[]{0.0, 0.0};
             }
             mNumberOfClassifierCalls++;
             Log.e(TAG, "Classifier Output: [#" + String.valueOf(mNumberOfClassifierCalls) + "::" + String.valueOf(Y[0]) + "," + String.valueOf(Y[1]) + "]");
@@ -721,67 +729,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         }
     };
 
-//    private class ClassifyTask extends AsyncTask<Void, Void, Double> {
-//        @Override
-//        protected Double doInBackground(Void... voids) {
-//            if(mFrequencyDomain) {
-//                double[] PSD2ch;
-//                double[] PSDCh1 = new double[sampleRate];
-//                double[] PSDCh2 = new double[sampleRate];
-//                double[] getInstancePSD1 = new double[sampleRate*2];
-//                double[] getInstancePSD2 = new double[sampleRate*2];
-//                System.arraycopy(mGraphAdapterCh1.classificationBuffer, sampleRate*2, getInstancePSD1, 0, sampleRate*2);
-//                System.arraycopy(mGraphAdapterCh2.classificationBuffer, sampleRate*2, getInstancePSD2, 0, sampleRate*2);
-//                PSD2ch = jPSDExtraction(getInstancePSD1, getInstancePSD2, sampleRate); //250 Hz: For PSDA/each channel[0>sampleRate|sampleRate:end]
-//                System.arraycopy(PSD2ch, 0, PSDCh1, 0, sampleRate);
-//                System.arraycopy(PSD2ch, sampleRate, PSDCh2, 0, sampleRate);
-//
-//                if (mPSDDataPointsToShow == 0) {
-//                    mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex;
-//                    mGraphAdapterCh1PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
-//                    mGraphAdapterCh2PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
-//                    if (mPSDDataPointsToShow > 64)
-//                        mFreqDomainPlotAdapter.setXyPlotDomainIncrement(6.0);
-//                    else mFreqDomainPlotAdapter.setXyPlotDomainIncrement(2.0);
-//                }
-//                mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD, PSDCh1, fPSDStartIndex, fPSDEndIndex);
-//                mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD, PSDCh2, fPSDStartIndex, fPSDEndIndex);
-//            }
-//
-//            double Y[];
-//            if (sampleRate==250) {
-//                double[] getInstance1 = mGraphAdapterCh1.classificationBuffer;
-//                double[] getInstance2 = mGraphAdapterCh2.classificationBuffer;
-//                Y = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
-//            } else if (sampleRate==4000) {
-//                //require last 8k pts:
-//                double[] getInstance1 = new double[sampleRate*2];
-//                double[] getInstance2 = new double[sampleRate*2];
-//                System.arraycopy(mGraphAdapterCh1.classificationBuffer, sampleRate*2, getInstance1, 0, sampleRate*2); //8000→end
-//                System.arraycopy(mGraphAdapterCh2.classificationBuffer, sampleRate*2, getInstance2, 0, sampleRate*2);
-//                Y = jClassifySSVEP4k(getInstance1, getInstance2, 1.5);
-//            } else {
-//                Y = new double[]{0.0,0.0} ;
-//            }
-//            Log.e(TAG, "Classifier Output: [#" + String.valueOf(mNumberOfClassifierCalls) + "::" + String.valueOf(Y[0]) + "," + String.valueOf(Y[1]) + "]");
-//            return Y[1];
-//        }
-//
-//        @Override
-//        protected void onPostExecute(Double Y) {
-//            mNumberOfClassifierCalls++;
-//            final String s = "SSVEP cPSDA\n: [" + String.valueOf(Y) + "]";
-//            runOnUiThread(new Runnable() {
-//                @Override
-//                public void run() {
-//                    mYfitTextView.setText(s);
-//                }
-//            });
-//            executeWheelchairCommand((int) (double) Y);
-//            super.onPostExecute(Y);
-//        }
-//    }
-
     private void updateTrainingRoutine(int dataPoints) {
         if (dataPoints % sampleRate == 0 && mRunTrainingBool) {
             int second = dataPoints / sampleRate;
@@ -793,24 +740,24 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 updateTrainingPrompt("EYES CLOSED");
                 updateTrainingPromptColor(Color.GREEN);
                 mSSVEPClass = 0;
-            } else if (second >= mSDS && second < 2*mSDS) {
-                eventSecondCountdown = 2*mSDS - second;
+            } else if (second >= mSDS && second < 2 * mSDS) {
+                eventSecondCountdown = 2 * mSDS - second;
                 updateTrainingPrompt("15.15Hz");
                 mSSVEPClass = 1;
-            } else if (second >= 2*mSDS && second < 3*mSDS) {
-                eventSecondCountdown = 3*mSDS - second;
+            } else if (second >= 2 * mSDS && second < 3 * mSDS) {
+                eventSecondCountdown = 3 * mSDS - second;
                 updateTrainingPrompt("16.67hz");
                 mSSVEPClass = 2;
-            } else if (second >= 3*mSDS && second < 4*mSDS) {
-                eventSecondCountdown = 4*mSDS - second;
+            } else if (second >= 3 * mSDS && second < 4 * mSDS) {
+                eventSecondCountdown = 4 * mSDS - second;
                 updateTrainingPrompt("18.51Hz");
                 mSSVEPClass = 3;
-            } else if (second >= 4*mSDS && second < 5*mSDS) {
-                eventSecondCountdown = 5*mSDS - second;
+            } else if (second >= 4 * mSDS && second < 5 * mSDS) {
+                eventSecondCountdown = 5 * mSDS - second;
                 updateTrainingPrompt("20.00Hz");
                 mSSVEPClass = 4;
-            } else if (second >= 5*mSDS && second < 6*mSDS) {
-                eventSecondCountdown = 6*mSDS - second;
+            } else if (second >= 5 * mSDS && second < 6 * mSDS) {
+                eventSecondCountdown = 6 * mSDS - second;
                 updateTrainingPrompt("Stop!");
                 updateTrainingPromptColor(Color.RED);
                 mSSVEPClass = 0;
@@ -834,7 +781,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     }
 
     private void updateTrainingView(final boolean b) {
-        final int visibility = (b)? View.VISIBLE : View.GONE;
+        final int visibility = (b) ? View.VISIBLE : View.GONE;
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -881,12 +828,23 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     }
 
     private void writeToDisk24(byte[] ch1Bytes, byte[] ch2Bytes) {
-        for (int i = 0; i < ch1Bytes.length / 3; i++) {
-            try {
-                exportFileWithClass(DataChannel.bytesToDouble(ch1Bytes[3 * i], ch1Bytes[3 * i + 1], ch1Bytes[3 * i + 2]),
-                        DataChannel.bytesToDouble(ch2Bytes[3 * i], ch2Bytes[3 * i + 1], ch2Bytes[3 * i + 2]));
-            } catch (IOException e) {
-                Log.e("IOException", e.toString());
+        if(byteResolution==3) {
+            for (int i = 0; i < ch1Bytes.length / 3; i++) {
+                try {
+                    exportFileWithClass(DataChannel.bytesToDouble(ch1Bytes[3 * i], ch1Bytes[3 * i + 1], ch1Bytes[3 * i + 2]),
+                            DataChannel.bytesToDouble(ch2Bytes[3 * i], ch2Bytes[3 * i + 1], ch2Bytes[3 * i + 2]));
+                } catch (IOException e) {
+                    Log.e("IOException", e.toString());
+                }
+            }
+        } else if (byteResolution==2) {
+            for (int i = 0; i < ch1Bytes.length / 2; i++) {
+                try {
+                    exportFileWithClass(DataChannel.bytesToDouble(ch1Bytes[2 * i], ch1Bytes[2 * i + 1]),
+                            DataChannel.bytesToDouble(ch1Bytes[2 * i], ch1Bytes[2 * i + 1]));
+                } catch (IOException e) {
+                    Log.e("IOException", e.toString());
+                }
             }
         }
     }
@@ -1040,8 +998,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                double percent = (double)value/114.0*100.0;
-                String status = "Battery Level = "+String.valueOf(percent)+"%";
+                double percent = (double) value / 114.0 * 100.0;
+                String status = "Battery Level = " + String.valueOf(percent) + "%";
                 if (percent <= batteryWarning) {
                     mBatteryLevel.setTextColor(Color.RED);
                     mBatteryLevel.setTypeface(null, Typeface.BOLD);
