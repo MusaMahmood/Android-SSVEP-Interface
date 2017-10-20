@@ -8,6 +8,7 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
+import android.util.Log;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -201,14 +202,18 @@ public class BluetoothLe {
             mBluetoothGatt.disconnect();
             mBluetoothGatt.close();
         } catch (Exception e) {
+            Log.e("BluetoothLe.class","Exception"+e.toString());
         }
     }
 
     // Destructor
     @Override
     protected void finalize() throws Throwable {
-        if (!processQueueExecutor.equals(null))
+//        if (!processQueueExecutor.equals(null))
+//            processQueueExecutor.interrupt();
+        if(processQueueExecutor!=null) {
             processQueueExecutor.interrupt();
+        }
     }
 
     public interface BluetoothLeListener {

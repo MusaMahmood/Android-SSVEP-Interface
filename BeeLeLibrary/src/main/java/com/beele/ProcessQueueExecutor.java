@@ -17,21 +17,21 @@ import java.util.TimerTask;
  */
 public class ProcessQueueExecutor extends Thread {
 
-    public final static int REQUEST_TYPE_READ_CHAR = 1;
-    public final static int REQUEST_TYPE_WRITE_CHAR = 2;
-    public final static int REQUEST_TYPE_READ_DESCRIPTOR = 3;
-    public final static int REQUEST_TYPE_WRITE_DESCRIPTOR = 4;
-    public final static int REQUEST_TYPE_NOTIFICATION_ON = 5;
-    public static long EXECUTE_DELAY = 1000;// delay in execution ms
+    final static int REQUEST_TYPE_READ_CHAR = 1;
+    final static int REQUEST_TYPE_WRITE_CHAR = 2;
+    final static int REQUEST_TYPE_READ_DESCRIPTOR = 3;
+    final static int REQUEST_TYPE_WRITE_DESCRIPTOR = 4;
+    private final static int REQUEST_TYPE_NOTIFICATION_ON = 5;
+    private static long EXECUTE_DELAY = 1000;// delay in execution ms
     private static List<ReadWriteCharacteristic> processList = new ArrayList<ReadWriteCharacteristic>();
-    Timer processQueueTimer = new Timer();
+    private Timer processQueueTimer = new Timer();
 
     /**
      * Adds the request to ProcessQueueExecutor
      *
-     * @param readWriteCharacteristic
+     * @param readWriteCharacteristic description
      */
-    public static void addProcess(
+    static void addProcess(
             ReadWriteCharacteristic readWriteCharacteristic) {
         processList.add(readWriteCharacteristic);
     }
@@ -39,7 +39,7 @@ public class ProcessQueueExecutor extends Thread {
     /**
      * Removes the request from ProcessQueueExecutor
      *
-     * @param readWriteCharacteristic
+     * @param readWriteCharacteristic description
      */
     public static void removeProcess(
             ReadWriteCharacteristic readWriteCharacteristic) {

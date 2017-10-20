@@ -15,30 +15,30 @@ public class ReadWriteCharacteristic {
     private BluetoothGatt bluetoothGatt;
     private Object object;
 
-    public ReadWriteCharacteristic() {
-    }
+//    public ReadWriteCharacteristic() {
+//    }
 
-    public ReadWriteCharacteristic(int requestType, BluetoothGatt bluetoothGatt, Object object) {
+    ReadWriteCharacteristic(int requestType, BluetoothGatt bluetoothGatt, Object object) {
         this.requestType = requestType;
         this.bluetoothGatt = bluetoothGatt;
         this.object = object;
     }
 
-    public int getRequestType() {
+    int getRequestType() {
         return requestType;
     }
 
-    public void setRequestType(int requestType) {
-        this.requestType = requestType;
-    }
+//    public void setRequestType(int requestType) {
+//        this.requestType = requestType;
+//    }
 
-    public BluetoothGatt getBluetoothGatt() {
+    BluetoothGatt getBluetoothGatt() {
         return bluetoothGatt;
     }
 
-    public void setBluetoothGatt(BluetoothGatt bluetoothGatt) {
-        this.bluetoothGatt = bluetoothGatt;
-    }
+//    public void setBluetoothGatt(BluetoothGatt bluetoothGatt) {
+//        this.bluetoothGatt = bluetoothGatt;
+//    }
 
     public Object getObject() {
         return object;

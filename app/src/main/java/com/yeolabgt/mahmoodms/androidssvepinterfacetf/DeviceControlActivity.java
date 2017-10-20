@@ -55,6 +55,7 @@ import java.util.Locale;
 public class DeviceControlActivity extends Activity implements BluetoothLe.BluetoothLeListener {
     public static final String HZ = "0 Hz";
     // Graphing Variables:
+    private boolean mGraphInitializedBoolean = false;
     private GraphAdapter mGraphAdapterCh1;
     private GraphAdapter mGraphAdapterCh2;
     private GraphAdapter mGraphAdapterCh1PSDA;
@@ -62,7 +63,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     public XYPlotAdapter mTimeDomainPlotAdapter;
     public XYPlotAdapter mFreqDomainPlotAdapter;
     private double[] fPSD;
-    private int sampleRate = 250;
+    private int mSampleRate = 250;
     public static Redrawer redrawer;
     private final static String TAG = DeviceControlActivity.class.getSimpleName();
     //Refactored Data Channel Classes
@@ -75,6 +76,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private boolean mConnected;
     private boolean mRunTrainingBool;
     //Class instance variable
+    private boolean mBleInitializedBoolean = false;
     private BluetoothLe mBluetoothLe;
     //Connecting to Multiple Devices
     private String[] deviceMacAddresses = null;
@@ -83,7 +85,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private int mWheelchairGattIndex;
     private boolean mEEGConnected_2ch = false;
     // Classification
-    private int packetNumber_2ch = -1;
+    private int mNumber2ChPackets = -1;
+    private static int mPacketBuffer = 6;
     private int mNumberOfClassifierCalls = 0;
     //Layout - TextViews and Buttons
     private TextView mTrainingInstructions;
@@ -161,7 +164,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         ab.setTitle(mDeviceName);
         ab.setSubtitle(mDeviceAddress);
         //Initialize Bluetooth
-        initializeBluetoothArray();
+        if(!mBleInitializedBoolean) initializeBluetoothArray();
         mExportButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -251,7 +254,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     public void saveDataFile() throws IOException {
         File root = Environment.getExternalStorageDirectory();
 //        String fileTimeStamp = "EEG_SSVEPData_" + getTimeStamp() + "_" + String.valueOf((int) mSSVEPClass);
-        String fileTimeStamp = "EEG_SSVEPData_" + getTimeStamp() + "_" + String.valueOf(sampleRate) + "Hz";
+        String fileTimeStamp = "EEG_SSVEPData_" + getTimeStamp() + "_" + String.valueOf(mSampleRate) + "Hz";
         Log.e(TAG, "fileTimeStamp: " + fileTimeStamp);
         if (root.canWrite()) {
             File dir = new File(root.getAbsolutePath() + "/EEGData");
@@ -337,32 +340,38 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 mMSBFirst = true;
             }
             if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("8k".toLowerCase())) {
-                sampleRate = 8000;
+                mSampleRate = 8000;
+                mPacketBuffer = 32;
                 byteResolution = 2; //FOR ECG ONLY
             } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("4k".toLowerCase())) {
-                sampleRate = 4000;
+                mSampleRate = 4000;
+                mPacketBuffer = 16;
                 byteResolution = 3;
             } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("2k".toLowerCase())) {
-                sampleRate = 2000;
+                mSampleRate = 2000;
+                mPacketBuffer = 8;
                 byteResolution = 3;
             } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("1k".toLowerCase())) {
-                sampleRate = 1000;
+                mSampleRate = 1000;
+                mPacketBuffer = 4;
                 byteResolution = 3;
             } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("500".toLowerCase())) {
-                sampleRate = 500;
+                mSampleRate = 500;
+                mPacketBuffer = 2;
                 byteResolution = 3;
             } else {
-                sampleRate = 250;
+                mSampleRate = 250;
+                mPacketBuffer = 2;
             }
             fPSDStartIndex = 16;
             fPSDEndIndex = 80;
-            Log.e(TAG, "sampleRate: " + sampleRate + "Hz");
-            fPSD = jLoadfPSD(sampleRate);
+            Log.e(TAG, "mSampleRate: " + mSampleRate + "Hz");
+            fPSD = jLoadfPSD(mSampleRate);
 
-            setupGraph();
+            if(!mGraphInitializedBoolean) setupGraph();
 
-            mGraphAdapterCh1.setxAxisIncrementFromSampleRate(sampleRate);
-            mGraphAdapterCh2.setxAxisIncrementFromSampleRate(sampleRate);
+            mGraphAdapterCh1.setxAxisIncrementFromSampleRate(mSampleRate);
+            mGraphAdapterCh2.setxAxisIncrementFromSampleRate(mSampleRate);
 
             mGraphAdapterCh1.setSeriesHistoryDataPoints(250 * 5);
             mGraphAdapterCh2.setSeriesHistoryDataPoints(250 * 5);
@@ -375,12 +384,13 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 }
             }
         }
+        mBleInitializedBoolean = true;
     }
 
     private void setupGraph() {
         // Initialize our XYPlot reference:
-        mGraphAdapterCh1 = new GraphAdapter(sampleRate * 4, "EEG Data Ch 1", false, Color.BLUE, sampleRate * 4); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
-        mGraphAdapterCh2 = new GraphAdapter(sampleRate * 4, "EEG Data Ch 2", false, Color.RED, sampleRate * 4); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
+        mGraphAdapterCh1 = new GraphAdapter(mSampleRate * 4, "EEG Data Ch 1", false, Color.BLUE, mSampleRate * 4); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
+        mGraphAdapterCh2 = new GraphAdapter(mSampleRate * 4, "EEG Data Ch 2", false, Color.RED, mSampleRate * 4); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
         mGraphAdapterCh1PSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (Ch1)", false, Color.BLUE, 0);
         mGraphAdapterCh2PSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (Ch2)", false, Color.RED, 0);
         //PLOT CH1 By default
@@ -394,13 +404,14 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         mTimeDomainPlotAdapter = new XYPlotAdapter(findViewById(R.id.eegTimeDomainXYPlot), false, 1000);
         mTimeDomainPlotAdapter.xyPlot.addSeries(mGraphAdapterCh1.series, mGraphAdapterCh1.lineAndPointFormatter);
         mTimeDomainPlotAdapter.xyPlot.addSeries(mGraphAdapterCh2.series, mGraphAdapterCh2.lineAndPointFormatter);
-        mFreqDomainPlotAdapter = new XYPlotAdapter(findViewById(R.id.frequencyAnalysisXYPlot), "Frequency (Hz)", "Power Density (W/Hz)", ((double) sampleRate / 125.0));
+        mFreqDomainPlotAdapter = new XYPlotAdapter(findViewById(R.id.frequencyAnalysisXYPlot), "Frequency (Hz)", "Power Density (W/Hz)", ((double) mSampleRate / 125.0));
         mFreqDomainPlotAdapter.xyPlot.addSeries(mGraphAdapterCh1PSDA.series, mGraphAdapterCh1PSDA.lineAndPointFormatter);
         mFreqDomainPlotAdapter.xyPlot.addSeries(mGraphAdapterCh2PSDA.series, mGraphAdapterCh2PSDA.lineAndPointFormatter);
 
         redrawer = new Redrawer(
                 Arrays.asList(new Plot[]{mTimeDomainPlotAdapter.xyPlot, mFreqDomainPlotAdapter.xyPlot}), 60, false);
         redrawer.start();
+        mGraphInitializedBoolean = true;
     }
 
     private void setNameAddress(String name_action, String address_action) {
@@ -573,11 +584,10 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
 
     @Override
     public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-        int batteryLevel;
         Log.i(TAG, "onCharacteristicRead");
         if (status == BluetoothGatt.GATT_SUCCESS) {
             if (AppConstant.CHAR_BATTERY_LEVEL.equals(characteristic.getUuid())) {
-                batteryLevel = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+                int batteryLevel = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
                 updateBatteryStatus(batteryLevel);
                 Log.i(TAG, "Battery Level :: " + batteryLevel);
             }
@@ -592,9 +602,9 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             mCh1 = new DataChannel(false, mMSBFirst);
             mCh2 = new DataChannel(false, mMSBFirst);
         }
-        //TODO: ADD BATTERY MEASURE CAPABILITY IN FIRMWARE: (ble_ADC); Copy from onCharacteristicRead
+
         if (AppConstant.CHAR_BATTERY_LEVEL.equals(characteristic.getUuid())) {
-            int batteryLevel = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+            int batteryLevel = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
             updateBatteryStatus(batteryLevel);
         }
 
@@ -606,7 +616,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             getDataRateBytes(mNewEEGdataBytes.length);
             if (mEEGConnected_2ch) {
                 mCh1.handleNewData(mNewEEGdataBytes);
-                if (mCh1.packetCounter == 6) {
+                if (mCh1.packetCounter == mPacketBuffer) {
                     addToGraphBuffer(mCh1, mGraphAdapterCh1, true);
                 }
             }
@@ -621,20 +631,20 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             getDataRateBytes(byteLength);
             if (mEEGConnected_2ch) {
                 mCh2.handleNewData(mNewEEGdataBytes);
-                if (mCh2.packetCounter == 6) {
+                if (mCh2.packetCounter == mPacketBuffer) {
                     addToGraphBuffer(mCh2, mGraphAdapterCh2, false);
                 }
             }
         }
         if (mCh1.chEnabled && mCh2.chEnabled) {
-            packetNumber_2ch++;
+            mNumber2ChPackets++;
             mEEGConnected_2ch = true;
             mCh1.chEnabled = false;
             mCh2.chEnabled = false;
             if (mCh1.characteristicDataPacketBytes != null && mCh2.characteristicDataPacketBytes != null) {
                 writeToDisk24(mCh1.characteristicDataPacketBytes, mCh2.characteristicDataPacketBytes);
             }
-            if (packetNumber_2ch % 10 == 0) { //Every x * 6 data points
+            if (mNumber2ChPackets % 10 == 0) { //Every x * 6 data points
                 Thread classifyTaskThread = new Thread(mClassifyTaskRunnableThread);
                 classifyTaskThread.start();
                 Log.e(TAG, "[" + String.valueOf(mNumberOfClassifierCalls + 1) + "] CALLING CLASSIFIER FUNCTION!");
@@ -653,7 +663,9 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     void addToGraphBuffer(DataChannel dataChannel, GraphAdapter graphAdapter, boolean updateTrainingRoutine) {
         if (byteResolution == 3) {
             for (int i = 0; i < dataChannel.dataBuffer.length / 3; i += graphAdapter.sampleRate / 250) {
-                graphAdapter.addDataPoint(DataChannel.bytesToDouble(dataChannel.dataBuffer[3 * i], dataChannel.dataBuffer[3 * i + 1], dataChannel.dataBuffer[3 * i + 2]), dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 3 + i);
+                graphAdapter.addDataPoint(DataChannel.bytesToDouble(dataChannel.dataBuffer[3 * i],
+                        dataChannel.dataBuffer[3 * i + 1], dataChannel.dataBuffer[3 * i + 2]),
+                        dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 3 + i);
                 if (updateTrainingRoutine) {
                     for (int j = 0; j < graphAdapter.sampleRate / 250; j++) {
                         updateTrainingRoutine(dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 3 + i + j);
@@ -662,7 +674,9 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             }
         } else if (byteResolution == 2) {
             for (int i = 0; i < dataChannel.dataBuffer.length / 2; i += graphAdapter.sampleRate / 250) {
-                graphAdapter.addDataPoint(DataChannel.bytesToDouble(dataChannel.dataBuffer[2 * i], dataChannel.dataBuffer[2 * i + 1]), dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 2 + i);
+                graphAdapter.addDataPoint(DataChannel.bytesToDouble(dataChannel.dataBuffer[2 * i],
+                        dataChannel.dataBuffer[2 * i + 1]),
+                        dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 2 + i);
                 if (updateTrainingRoutine) {
                     for (int j = 0; j < graphAdapter.sampleRate / 250; j++) {
                         updateTrainingRoutine(dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 2 + i + j);
@@ -679,15 +693,20 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         public void run() {
             if (mFrequencyDomain) {
                 double[] PSD2ch;
-                double[] PSDCh1 = new double[sampleRate];
-                double[] PSDCh2 = new double[sampleRate];
-                double[] getInstancePSD1 = new double[sampleRate * 2];
-                double[] getInstancePSD2 = new double[sampleRate * 2];
-                System.arraycopy(mGraphAdapterCh1.classificationBuffer, sampleRate * 2, getInstancePSD1, 0, sampleRate * 2);
-                System.arraycopy(mGraphAdapterCh2.classificationBuffer, sampleRate * 2, getInstancePSD2, 0, sampleRate * 2);
-                PSD2ch = jPSDExtraction(getInstancePSD1, getInstancePSD2, sampleRate); //250 Hz: For PSDA/each channel[0>sampleRate|sampleRate:end]
-                System.arraycopy(PSD2ch, 0, PSDCh1, 0, sampleRate);
-                System.arraycopy(PSD2ch, sampleRate, PSDCh2, 0, sampleRate);
+                double[] PSDCh1 = new double[mSampleRate];
+                double[] PSDCh2 = new double[mSampleRate];
+                double[] getInstancePSD1 = new double[mSampleRate * 2];
+                double[] getInstancePSD2 = new double[mSampleRate * 2];
+                System.arraycopy(mGraphAdapterCh1.classificationBuffer, mSampleRate * 2, getInstancePSD1, 0, mSampleRate * 2);
+                System.arraycopy(mGraphAdapterCh2.classificationBuffer, mSampleRate * 2, getInstancePSD2, 0, mSampleRate * 2);
+                if(mSampleRate <8000) {
+                    PSD2ch = jPSDExtraction(getInstancePSD1, getInstancePSD2, mSampleRate); //250 Hz: For PSDA/each channel[0>mSampleRate|mSampleRate:end]
+                    System.arraycopy(PSD2ch, 0, PSDCh1, 0, mSampleRate);
+                    System.arraycopy(PSD2ch, mSampleRate, PSDCh2, 0, mSampleRate);
+                } else {
+                    Arrays.fill(PSDCh1,0.0);
+                    Arrays.fill(PSDCh2,0.0);
+                }
 
                 if (mPSDDataPointsToShow == 0) {
                     mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex;
@@ -702,16 +721,16 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             }
 
             double Y[];
-            if (sampleRate == 250) {
+            if (mSampleRate == 250) {
                 double[] getInstance1 = mGraphAdapterCh1.classificationBuffer;
                 double[] getInstance2 = mGraphAdapterCh2.classificationBuffer;
                 Y = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
-            } else if (sampleRate == 4000) {
+            } else if (mSampleRate == 4000) {
                 //require last 8k pts:
-                double[] getInstance1 = new double[sampleRate * 2];
-                double[] getInstance2 = new double[sampleRate * 2];
-                System.arraycopy(mGraphAdapterCh1.classificationBuffer, sampleRate * 2, getInstance1, 0, sampleRate * 2); //8000→end
-                System.arraycopy(mGraphAdapterCh2.classificationBuffer, sampleRate * 2, getInstance2, 0, sampleRate * 2);
+                double[] getInstance1 = new double[mSampleRate * 2];
+                double[] getInstance2 = new double[mSampleRate * 2];
+                System.arraycopy(mGraphAdapterCh1.classificationBuffer, mSampleRate * 2, getInstance1, 0, mSampleRate * 2); //8000→end
+                System.arraycopy(mGraphAdapterCh2.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2);
                 Y = jClassifySSVEP4k(getInstance1, getInstance2, 1.5);
             } else {
                 Y = new double[]{0.0, 0.0};
@@ -730,10 +749,9 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     };
 
     private void updateTrainingRoutine(int dataPoints) {
-        if (dataPoints % sampleRate == 0 && mRunTrainingBool) {
-            int second = dataPoints / sampleRate;
+        if (dataPoints % mSampleRate == 0 && mRunTrainingBool) {
+            int second = dataPoints / mSampleRate;
             int mSDS = (int) mStimulusDelaySeconds;
-            //TODO: REMEMBER TO CHANGE mEMGClass
             int eventSecondCountdown = 0;
             if (second >= 0 && second < mSDS) {
                 eventSecondCountdown = mSDS - second;
@@ -816,7 +834,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             case 3:
                 bytes[0] = (byte) 0x0F;
                 break;
-            case 4: // TODO: 6/27/2017 Disconnect instead of reverse?
+            case 4:
+                // TODO: 6/27/2017 Disconnect instead of reverse?
                 bytes[0] = (byte) 0xFF;
                 break;
             default:
@@ -841,7 +860,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             for (int i = 0; i < ch1Bytes.length / 2; i++) {
                 try {
                     exportFileWithClass(DataChannel.bytesToDouble(ch1Bytes[2 * i], ch1Bytes[2 * i + 1]),
-                            DataChannel.bytesToDouble(ch1Bytes[2 * i], ch1Bytes[2 * i + 1]));
+                            DataChannel.bytesToDouble(ch2Bytes[2 * i], ch2Bytes[2 * i + 1]));
                 } catch (IOException e) {
                     Log.e("IOException", e.toString());
                 }
@@ -870,7 +889,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     @Override
     public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
         uiRssiUpdate(rssi);
-//        String lastRssi = String.valueOf(rssi) + "db";
     }
 
     @Override
@@ -994,13 +1012,26 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         });
     }
 
-    private void updateBatteryStatus(final int value) {
+    private void updateBatteryStatus(final int integerValue) {
+        final String status;
+        double convertedBatteryVoltage = ((double) integerValue/(4096.0))*7.20;
+        //Because TPS63001 dies below 1.8V, we need to set up a linear fit between 1.8-4.2V
+        //Anything over 4.2V = 100%
+        final double finalPercent;
+        if (((125.0/3.0)*convertedBatteryVoltage - 75.0) > 100.0) {
+            finalPercent = 100.0;
+        } else if (((125.0/3.0)*convertedBatteryVoltage - 75.0) < 0) {
+            finalPercent = 0;
+        } else {
+            finalPercent = (125.0/3.0)*convertedBatteryVoltage - 75.0;
+        }
+        Log.e(TAG,"Battery Integer Value: "+String.valueOf(integerValue));
+        Log.e(TAG,"ConvertedBatteryVoltage: "+String.format(Locale.US,"%.5f",convertedBatteryVoltage)+"V : "+String.format(Locale.US,"%.3f",finalPercent)+"%");
+        status = String.format(Locale.US,"%.1f",finalPercent)+"%";
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                double percent = (double) value / 114.0 * 100.0;
-                String status = "Battery Level = " + String.valueOf(percent) + "%";
-                if (percent <= batteryWarning) {
+                if (finalPercent <= batteryWarning) {
                     mBatteryLevel.setTextColor(Color.RED);
                     mBatteryLevel.setTypeface(null, Typeface.BOLD);
                     Toast.makeText(getApplicationContext(), "Charge Battery, Battery Low " + status, Toast.LENGTH_SHORT).show();
