@@ -29,7 +29,6 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CompoundButton;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
@@ -95,13 +94,15 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private TextView mSSVEPClassTextView;
     private TextView mYfitTextView;
     private Button mExportButton;
-    private Switch mDomainSwitch;
+    private Button mSButton;
+    private Button mFButton;
+    private Button mLButton;
+    private Button mRButton;
     private long mLastTime;
     private int mPSDDataPointsToShow = 0;
     int fPSDStartIndex = 0;
     int fPSDEndIndex = 100;
     private int byteResolution = 3;
-    private boolean mFrequencyDomain = true;
     private int points = 0;
     private Menu menu;
     //RSSI:
@@ -153,7 +154,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         //Set up TextViews
         mExportButton = findViewById(R.id.button_export);
-        mDomainSwitch = findViewById(R.id.domainSwitch);
+//        mDomainSwitch = findViewById(R.id.domainSwitch);
         mBatteryLevel = findViewById(R.id.batteryText);
         mTrainingInstructions = findViewById(R.id.trainingInstructions);
         updateTrainingView(mRunTrainingBool);
@@ -184,13 +185,11 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 startActivity(exportData);
             }
         });
+        mSButton = findViewById(R.id.buttonS);
+        mFButton = findViewById(R.id.buttonF);
+        mLButton = findViewById(R.id.buttonL);
+        mRButton = findViewById(R.id.buttonR);
         makeFilterSwitchVisible(false);
-        mDomainSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                mFrequencyDomain = isChecked;
-            }
-        });
         mLastTime = System.currentTimeMillis();
         mSSVEPClassTextView = findViewById(R.id.eegClassTextView);
         ToggleButton toggleButton1 = findViewById(R.id.toggleButtonWheelchairControl);
@@ -198,6 +197,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 mWheelchairControl = b;
+                executeWheelchairCommand(0);
+                makeFilterSwitchVisible(b);
             }
         });
 
@@ -225,6 +226,30 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             }
         });
         mMediaBeep = MediaPlayer.create(this, R.raw.beep_01a);
+        mSButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                executeWheelchairCommand(0);
+            }
+        });
+        mFButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                executeWheelchairCommand(1);
+            }
+        });
+        mLButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                executeWheelchairCommand(3);
+            }
+        });
+        mRButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                executeWheelchairCommand(2);
+            }
+        });
     }
 
     private void resetActivity() {
@@ -286,7 +311,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
 
     @Override
     public void onResume() {
-        makeFilterSwitchVisible(true);
         jmainInitialization(false);
         double a[] = new double[1000];
         Arrays.fill(a, 0.0);
@@ -331,6 +355,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             if ("WheelchairControl".equals(mBluetoothDeviceArray[i].getName())) {
                 mWheelchairGattIndex = i;
                 Log.e(TAG, "mWheelchairGattIndex: " + mWheelchairGattIndex);
+                continue; //we are done initializing
             }
             if ("EMG 250Hz".equals(mBluetoothDeviceArray[i].getName())) {
                 mMSBFirst = false;
@@ -530,14 +555,12 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 }
 
                 if (AppConstant.SERVICE_3CH_EMG_SIGNAL.equals(service.getUuid())) {
-                    makeFilterSwitchVisible(true);
                     mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_3CH_EMG_SIGNAL_CH1), true);
                     mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_3CH_EMG_SIGNAL_CH2), true);
                     mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_3CH_EMG_SIGNAL_CH3), true);
                 }
 
                 if (AppConstant.SERVICE_EEG_SIGNAL.equals(service.getUuid())) {
-                    makeFilterSwitchVisible(true);
                     mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH1_SIGNAL), true);
                     mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH2_SIGNAL), true);
                     if (service.getCharacteristic(AppConstant.CHAR_EEG_CH3_SIGNAL) != null) {
@@ -549,7 +572,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 }
 
                 if (AppConstant.SERVICE_EOG_SIGNAL.equals(service.getUuid())) {
-                    makeFilterSwitchVisible(true);
                     mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_EOG_CH1_SIGNAL), true);
                     mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_EOG_CH2_SIGNAL), true);
                     for (BluetoothGattCharacteristic c : service.getCharacteristics()) {
@@ -572,11 +594,17 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             @Override
             public void run() {
                 if (visible) {
-                    mDomainSwitch.setVisibility(View.VISIBLE);
                     mExportButton.setVisibility(View.VISIBLE);
+                    mSButton.setVisibility(View.VISIBLE);
+                    mFButton.setVisibility(View.VISIBLE);
+                    mLButton.setVisibility(View.VISIBLE);
+                    mRButton.setVisibility(View.VISIBLE);
                 } else {
                     mExportButton.setVisibility(View.INVISIBLE);
-                    mDomainSwitch.setVisibility(View.INVISIBLE);
+                    mSButton.setVisibility(View.INVISIBLE);
+                    mFButton.setVisibility(View.INVISIBLE);
+                    mLButton.setVisibility(View.INVISIBLE);
+                    mRButton.setVisibility(View.INVISIBLE);
                 }
             }
         });
@@ -691,39 +719,39 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private Runnable mClassifyTaskRunnableThread = new Runnable() {
         @Override
         public void run() {
-            if (mFrequencyDomain) {
-                double[] PSD2ch;
-                double[] PSDCh1 = new double[mSampleRate];
-                double[] PSDCh2 = new double[mSampleRate];
-                double[] getInstancePSD1 = new double[mSampleRate * 2];
-                double[] getInstancePSD2 = new double[mSampleRate * 2];
-                System.arraycopy(mGraphAdapterCh1.classificationBuffer, mSampleRate * 2, getInstancePSD1, 0, mSampleRate * 2);
-                System.arraycopy(mGraphAdapterCh2.classificationBuffer, mSampleRate * 2, getInstancePSD2, 0, mSampleRate * 2);
-                if(mSampleRate <8000) {
-                    PSD2ch = jPSDExtraction(getInstancePSD1, getInstancePSD2, mSampleRate); //250 Hz: For PSDA/each channel[0>mSampleRate|mSampleRate:end]
-                    System.arraycopy(PSD2ch, 0, PSDCh1, 0, mSampleRate);
-                    System.arraycopy(PSD2ch, mSampleRate, PSDCh2, 0, mSampleRate);
-                } else {
-                    Arrays.fill(PSDCh1,0.0);
-                    Arrays.fill(PSDCh2,0.0);
-                }
-
-                if (mPSDDataPointsToShow == 0) {
-                    mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex;
-                    mGraphAdapterCh1PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
-                    mGraphAdapterCh2PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
-                    if (mPSDDataPointsToShow > 64)
-                        mFreqDomainPlotAdapter.setXyPlotDomainIncrement(6.0);
-                    else mFreqDomainPlotAdapter.setXyPlotDomainIncrement(2.0);
-                }
-                mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD, PSDCh1, fPSDStartIndex, fPSDEndIndex);
-                mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD, PSDCh2, fPSDStartIndex, fPSDEndIndex);
+            double[] PSD2ch;
+            double[] PSDCh1 = new double[mSampleRate];
+            double[] PSDCh2 = new double[mSampleRate];
+            double[] getInstancePSD1 = new double[mSampleRate * 2];
+            double[] getInstancePSD2 = new double[mSampleRate * 2];
+            System.arraycopy(mGraphAdapterCh1.classificationBuffer, mSampleRate * 2, getInstancePSD1, 0, mSampleRate * 2);
+            System.arraycopy(mGraphAdapterCh2.classificationBuffer, mSampleRate * 2, getInstancePSD2, 0, mSampleRate * 2);
+            if(mSampleRate <8000) {
+                PSD2ch = jPSDExtraction(getInstancePSD1, getInstancePSD2, mSampleRate); //250 Hz: For PSDA/each channel[0>mSampleRate|mSampleRate:end]
+                System.arraycopy(PSD2ch, 0, PSDCh1, 0, mSampleRate);
+                System.arraycopy(PSD2ch, mSampleRate, PSDCh2, 0, mSampleRate);
+            } else {
+                Arrays.fill(PSDCh1,0.0);
+                Arrays.fill(PSDCh2,0.0);
             }
+
+            if (mPSDDataPointsToShow == 0) {
+                mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex;
+                mGraphAdapterCh1PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
+                mGraphAdapterCh2PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
+                if (mPSDDataPointsToShow > 64)
+                    mFreqDomainPlotAdapter.setXyPlotDomainIncrement(6.0);
+                else mFreqDomainPlotAdapter.setXyPlotDomainIncrement(2.0);
+            }
+            mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD, PSDCh1, fPSDStartIndex, fPSDEndIndex);
+            mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD, PSDCh2, fPSDStartIndex, fPSDEndIndex);
 
             double Y[];
             if (mSampleRate == 250) {
-                double[] getInstance1 = mGraphAdapterCh1.classificationBuffer;
-                double[] getInstance2 = mGraphAdapterCh2.classificationBuffer;
+                double[] getInstance1 = new double[mSampleRate * 2];
+                double[] getInstance2 = new double[mSampleRate * 2];
+                System.arraycopy(mGraphAdapterCh1.classificationBuffer, mSampleRate * 2, getInstance1, 0, mSampleRate * 2); //8000→end
+                System.arraycopy(mGraphAdapterCh2.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2);
                 Y = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
             } else if (mSampleRate == 4000) {
                 //require last 8k pts:
@@ -781,7 +809,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 mSSVEPClass = 0;
                 disconnectAllBLE();
             }
-            if (eventSecondCountdown == 10) {
+            if (eventSecondCountdown == mSDS) {
                 mMediaBeep.start();
             }
         }
