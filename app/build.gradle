@@ -11,8 +11,10 @@ project.buildDir = 'gradleBuild'
 getProject().setBuildDir('gradleBuild')
 
 // import DownloadModels task
-project.ext.ASSET_DIR = projectDir.toString() + '/assets'
-project.ext.TMP_DIR   = project.buildDir.toString() + '/downloads'
+//Project directory is location of this build file.
+//currently: {PROJECT_ROOT}/app/
+project.ext.ASSET_DIR = getProjectDir().toString() + '/assets'
+//project.ext.TMP_DIR   = project.buildDir.toString() + '/downloads'
 // Controls output directory in APK and CPU type for Bazel builds.
 // NOTE: Does not affect the Makefile build target API (yet), which currently
 // assumes armeabi-v7a. If building with make, changing this will require
@@ -57,13 +59,16 @@ android {
 
     sourceSets {
         main {
-//            manifest.srcFile '\\src\\main\\AndroidManifest.xml'
-//            resources.srcDirs = ['src']
-//            aidl.srcDirs = ['src']
-//            renderscript.srcDirs = ['src']
-//            res.srcDirs = ['res']
+            java {
+                srcDir 'app/src'
+            }
+            manifest.srcFile 'src/main/AndroidManifest.xml'
+            resources.srcDirs = ['src']
+            aidl.srcDirs = ['src']
+            renderscript.srcDirs = ['src']
+            res.srcDirs = ['src/main/res']
             assets.srcDirs = [project.ext.ASSET_DIR]
-//            jniLibs.srcDirs = ['libs']
+            jniLibs.srcDirs = ['src/main/cpp']
         }
 
         debug.setRoot('build-types/debug')
@@ -73,7 +78,6 @@ android {
 
 // Download default models; if you wish to use your own models then
 // place them in the "assets" directory and comment out this line.
-//apply from: "load-models.gradle"
 
 dependencies {
     //Added
