@@ -15,7 +15,7 @@ class DataChannel {
     int totalDataPointsReceived;
     byte[] dataBuffer;
     //Classification:
-    private int classificationBufferSize;
+    int classificationBufferSize;
     double[] classificationBuffer;
     float[] classificationBufferFloats;
 

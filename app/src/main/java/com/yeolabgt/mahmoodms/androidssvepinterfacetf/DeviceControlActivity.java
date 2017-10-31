@@ -129,16 +129,17 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     //Tensorflow stuff:
     private TensorFlowInferenceInterface mTFInferenceInterface;
     //INPUT STRING CONSTANTS:
-    public static final String INPUT_DATA_FEED = "decoded_sample_data:0";
-    public static final int WINDOW_LENGTH = 300;
-    public static final int WINDOW_DIMENSIONS = 2;
-    private static final String OUTPUT_SCORES_NAME = "labels_softmax";
-
+    public static final String INPUT_DATA_FEED = "input";
+    public static final String OUTPUT_DATA_FEED = "output";
+    public static final int WINDOW_DIMENSION_LENGTH_NORMAL = 300;
+    public static final int WINDOW_DIMENSION_LENGTH = WINDOW_DIMENSION_LENGTH_NORMAL*2;
+    public static final int WINDOW_DIMENSION_WIDTH = 1;
+    String[] mOutputScoresNames;
     // TODO: 10/30/2017 Some helper class like RecognizeCommands from the speech example?
     private boolean mTFRunModel = false;
         //Directories:
     private static final String[] LABELS = {"Alpha","15.15Hz","16.67Hz","18.51Hz", "20.00Hz"};
-    private static final String MODEL_FILENAME = "file:///android_asset/saved_model.pb";
+    private static final String MODEL_FILENAME = "file:///android_asset/opt_ssvep_net.pb";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -190,19 +191,21 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         mRButton = findViewById(R.id.buttonR);
         Button resetButton = findViewById(R.id.resetActivityButton);
         Switch mTensorflowSwitch = findViewById(R.id.tensorflowClassificationSwitch);
-        makeFilterSwitchVisible(false);
+        changeUIElementVisibility(false);
         mLastTime = System.currentTimeMillis();
         mSSVEPClassTextView = findViewById(R.id.eegClassTextView);
-        // TODO: 10/30/2017 INIT TF STUFF:
+        // Initialize Tensorflow Inference Interface
         mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILENAME);
+        mOutputScoresNames = new String[] { OUTPUT_DATA_FEED };
 
+        //UI Listeners
         ToggleButton toggleButton1 = findViewById(R.id.toggleButtonWheelchairControl);
         toggleButton1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 mWheelchairControl = b;
                 executeWheelchairCommand(0);
-                makeFilterSwitchVisible(b);
+                changeUIElementVisibility(b);
             }
         });
         ToggleButton ch1 = findViewById(R.id.toggleButtonCh1);
@@ -225,6 +228,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 mTFRunModel = b;
+                //Reset counter:
+                mNumberOfClassifierCalls = 1;
             }
         });
         resetButton.setOnClickListener(new View.OnClickListener() {
@@ -357,7 +362,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     @Override
     protected void onPause() {
         if (redrawer != null) redrawer.pause();
-        makeFilterSwitchVisible(false);
+        changeUIElementVisibility(false);
         super.onPause();
     }
 
@@ -615,7 +620,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         }
     }
 
-    private void makeFilterSwitchVisible(final boolean visible) {
+    private void changeUIElementVisibility(final boolean visible) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -653,8 +658,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     @Override
     public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
         if ((mCh1 == null || mCh2 == null)) {
-            mCh1 = new DataChannel(false, mMSBFirst, 2*mSampleRate);
-            mCh2 = new DataChannel(false, mMSBFirst, 2*mSampleRate);
+            mCh1 = new DataChannel(false, mMSBFirst, 4*mSampleRate);
+            mCh2 = new DataChannel(false, mMSBFirst, 4*mSampleRate);
         }
 
         if (AppConstant.CHAR_BATTERY_LEVEL.equals(characteristic.getUuid())) {
@@ -704,20 +709,26 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                     classifyTaskThread.start();
                     Log.e(TAG, "[" + String.valueOf(mNumberOfClassifierCalls + 1) + "] CALLING CLASSIFIER FUNCTION!");
                 } else {
-                    //Run TF Model:
+                    //Run TF Model: SEE ORIGINAL .py SCRIPT TO VERIFY CORRECT INPUTS!
                     float[] outputScores = new float[5];//5 is number of classes/labels
-                    String[] outputScoresNames = new String[] {OUTPUT_SCORES_NAME};
-                    //SEE ORIGINAL .py SCRIPT.
-                    // TODO: 10/30/2017 BUFFER SHOULD (PROBABLY) BE A FLOAT AND A DIFFERENT LENGTH:
-                    float[] ch1_doubles = new float[300];
-                    System.arraycopy(mCh1.classificationBufferFloats, 199, ch1_doubles, 0, 300);
-                    float[] ch2_doubles = new float[300];
-                    System.arraycopy(mCh2.classificationBufferFloats, 199, ch2_doubles, 0, 300);
+                    float[] ch1_doubles = new float[WINDOW_DIMENSION_LENGTH_NORMAL];
+                    System.arraycopy(mCh1.classificationBufferFloats,
+                            mCh1.classificationBufferSize-WINDOW_DIMENSION_LENGTH_NORMAL-1,
+                            ch1_doubles, 0, WINDOW_DIMENSION_LENGTH_NORMAL);
+                    float[] ch2_doubles = new float[WINDOW_DIMENSION_LENGTH_NORMAL];
+                    System.arraycopy(mCh2.classificationBufferFloats,
+                            mCh2.classificationBufferSize-WINDOW_DIMENSION_LENGTH_NORMAL-1,
+                            ch2_doubles, 0, WINDOW_DIMENSION_LENGTH_NORMAL);
                     float[] mSSVEPDataFeedTF = Floats.concat(ch1_doubles, ch2_doubles);
-                    mTFInferenceInterface.feed(INPUT_DATA_FEED, mSSVEPDataFeedTF, WINDOW_LENGTH, WINDOW_DIMENSIONS);
-                    mTFInferenceInterface.run(outputScoresNames);
-                    mTFInferenceInterface.fetch(OUTPUT_SCORES_NAME, outputScores);
+                    // 1 - feed probabilities:
+                    Log.i(TAG, "onCharacteristicChanged: TF_PRECALL_TIME, N#"+String.valueOf(mNumberOfClassifierCalls));
+                    mTFInferenceInterface.feed("keep_prob", new float[] { 1 });
+                    mTFInferenceInterface.feed(INPUT_DATA_FEED, mSSVEPDataFeedTF, WINDOW_DIMENSION_WIDTH, WINDOW_DIMENSION_LENGTH);
+                    mTFInferenceInterface.run(mOutputScoresNames);
+                    mTFInferenceInterface.fetch(OUTPUT_DATA_FEED, outputScores);
+                    Log.i(TAG, "[CALL#"+String.valueOf(mNumberOfClassifierCalls)+"]LABELS: "+ Arrays.toString(LABELS));
                     Log.d(TAG, "TF outputScores: " + Arrays.toString(outputScores));
+                    mNumberOfClassifierCalls++;
                 }
             }
         }
