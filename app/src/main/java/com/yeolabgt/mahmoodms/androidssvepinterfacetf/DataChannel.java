@@ -17,12 +17,14 @@ class DataChannel {
     //Classification:
     private int classificationBufferSize;
     double[] classificationBuffer;
+    float[] classificationBufferFloats;
 
     DataChannel(boolean chEnabled, boolean MSBFirst, int classificationBufferSize) {
         this.packetCounter = 0;
         this.totalDataPointsReceived = 0;
         this.chEnabled = chEnabled;
         this.classificationBuffer = new double[classificationBufferSize];
+        this.classificationBufferFloats = new float[classificationBufferSize];
         this.classificationBufferSize = classificationBufferSize;
         setMSBFirst(MSBFirst);
     }
@@ -54,7 +56,9 @@ class DataChannel {
     private void addToBuffer(double a) {
         if(this.classificationBuffer!=null && this.classificationBufferSize>0) {
             System.arraycopy(this.classificationBuffer, 1, this.classificationBuffer, 0, this.classificationBufferSize-1); //shift backwards
+            System.arraycopy(this.classificationBufferFloats, 1, this.classificationBufferFloats, 0, this.classificationBufferSize-1); //shift backwards
             this.classificationBuffer[this.classificationBufferSize-1] = a; //add to front:
+            this.classificationBufferFloats[this.classificationBufferSize-1] = (float)a;
         }
     }
 

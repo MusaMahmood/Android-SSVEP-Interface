@@ -29,6 +29,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
@@ -36,6 +37,7 @@ import android.widget.ToggleButton;
 import com.androidplot.Plot;
 import com.androidplot.util.Redrawer;
 import com.beele.BluetoothLe;
+import com.google.common.primitives.Floats;
 import com.opencsv.CSVWriter;
 
 import org.tensorflow.contrib.android.TensorFlowInferenceInterface;
@@ -127,8 +129,9 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     //Tensorflow stuff:
     private TensorFlowInferenceInterface mTFInferenceInterface;
     //INPUT STRING CONSTANTS:
-    public static final String INPUT_DATA_CH1 = "decoded_sample_data:0";
-    public static final String INPUT_DATA_CH2 = "decoded_sample_data:1";
+    public static final String INPUT_DATA_FEED = "decoded_sample_data:0";
+    public static final int WINDOW_LENGTH = 300;
+    public static final int WINDOW_DIMENSIONS = 2;
     private static final String OUTPUT_SCORES_NAME = "labels_softmax";
 
     // TODO: 10/30/2017 Some helper class like RecognizeCommands from the speech example?
@@ -186,6 +189,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         mLButton = findViewById(R.id.buttonL);
         mRButton = findViewById(R.id.buttonR);
         Button resetButton = findViewById(R.id.resetActivityButton);
+        Switch mTensorflowSwitch = findViewById(R.id.tensorflowClassificationSwitch);
         makeFilterSwitchVisible(false);
         mLastTime = System.currentTimeMillis();
         mSSVEPClassTextView = findViewById(R.id.eegClassTextView);
@@ -215,6 +219,12 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 mGraphAdapterCh1PSDA.setPlotData(b);
                 mGraphAdapterCh2PSDA.setPlotData(b);
+            }
+        });
+        mTensorflowSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                mTFRunModel = b;
             }
         });
         resetButton.setOnClickListener(new View.OnClickListener() {
@@ -697,10 +707,14 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                     //Run TF Model:
                     float[] outputScores = new float[5];//5 is number of classes/labels
                     String[] outputScoresNames = new String[] {OUTPUT_SCORES_NAME};
+                    //SEE ORIGINAL .py SCRIPT.
                     // TODO: 10/30/2017 BUFFER SHOULD (PROBABLY) BE A FLOAT AND A DIFFERENT LENGTH:
-                        //SEE ORIGINAL .py SCRIPT.
-                    mTFInferenceInterface.feed(INPUT_DATA_CH1, mCh1.classificationBuffer);
-                    mTFInferenceInterface.feed(INPUT_DATA_CH2, mCh2.classificationBuffer);
+                    float[] ch1_doubles = new float[300];
+                    System.arraycopy(mCh1.classificationBufferFloats, 199, ch1_doubles, 0, 300);
+                    float[] ch2_doubles = new float[300];
+                    System.arraycopy(mCh2.classificationBufferFloats, 199, ch2_doubles, 0, 300);
+                    float[] mSSVEPDataFeedTF = Floats.concat(ch1_doubles, ch2_doubles);
+                    mTFInferenceInterface.feed(INPUT_DATA_FEED, mSSVEPDataFeedTF, WINDOW_LENGTH, WINDOW_DIMENSIONS);
                     mTFInferenceInterface.run(outputScoresNames);
                     mTFInferenceInterface.fetch(OUTPUT_SCORES_NAME, outputScores);
                     Log.d(TAG, "TF outputScores: " + Arrays.toString(outputScores));
