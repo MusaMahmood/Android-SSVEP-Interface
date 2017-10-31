@@ -195,7 +195,13 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         mLastTime = System.currentTimeMillis();
         mSSVEPClassTextView = findViewById(R.id.eegClassTextView);
         // Initialize Tensorflow Inference Interface
-        mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILENAME);
+//        String customModelPath = Environment.getExternalStorageDirectory().getAbsolutePath()+"/assets/opt_ssvep_net.pb";
+        String customModelPath = Environment.getExternalStorageDirectory().getAbsolutePath()+"/Download/tensorflow_assets/opt_ssvep_net.pb";
+        File customModel = new File(customModelPath);
+        Log.d(TAG, "onCreate: customModel.exists: "+String.valueOf(customModel.exists()));
+//        mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), customModelPath);
+        if(customModel.exists()) mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), customModelPath);
+        else mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILENAME);
         mOutputScoresNames = new String[] { OUTPUT_DATA_FEED };
 
         //UI Listeners
@@ -309,7 +315,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
      */
     public void saveDataFile() throws IOException {
         File root = Environment.getExternalStorageDirectory();
-//        String fileTimeStamp = "EEG_SSVEPData_" + getTimeStamp() + "_" + String.valueOf((int) mSSVEPClass);
         String fileTimeStamp = "EEG_SSVEPData_" + getTimeStamp() + "_" + String.valueOf(mSampleRate) + "Hz";
         Log.e(TAG, "fileTimeStamp: " + fileTimeStamp);
         if (root.canWrite()) {
@@ -585,12 +590,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                     Log.i(TAG, "BLE Wheelchair Control Service found");
                 }
 
-                if (AppConstant.SERVICE_3CH_EMG_SIGNAL.equals(service.getUuid())) {
-                    mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_3CH_EMG_SIGNAL_CH1), true);
-                    mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_3CH_EMG_SIGNAL_CH2), true);
-                    mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_3CH_EMG_SIGNAL_CH3), true);
-                }
-
                 if (AppConstant.SERVICE_EEG_SIGNAL.equals(service.getUuid())) {
                     mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH1_SIGNAL), true);
                     mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH2_SIGNAL), true);
@@ -599,16 +598,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                     }
                     if (service.getCharacteristic(AppConstant.CHAR_EEG_CH4_SIGNAL) != null) {
                         mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH4_SIGNAL), true);
-                    }
-                }
-
-                if (AppConstant.SERVICE_EOG_SIGNAL.equals(service.getUuid())) {
-                    mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_EOG_CH1_SIGNAL), true);
-                    mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_EOG_CH2_SIGNAL), true);
-                    for (BluetoothGattCharacteristic c : service.getCharacteristics()) {
-                        if (AppConstant.CHAR_EOG_CH3_SIGNAL.equals(c.getUuid())) {
-                            mBluetoothLe.setCharacteristicNotification(gatt, service.getCharacteristic(AppConstant.CHAR_EOG_CH3_SIGNAL), true);
-                        }
                     }
                 }
 
@@ -799,7 +788,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             }
             mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD, PSDCh1, fPSDStartIndex, fPSDEndIndex);
             mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD, PSDCh2, fPSDStartIndex, fPSDEndIndex);
-
+            //TODO: Move TF Classifier Here
             double Y[];
             if (mSampleRate == 250) {
                 double[] getInstance1 = new double[mSampleRate * 2];
@@ -815,7 +804,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 System.arraycopy(mCh2.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2);
                 Y = jClassifySSVEP4k(getInstance1, getInstance2, 1.5);
             } else {
-                Y = new double[]{0.0, 0.0};
+                Y = new double[]{-1.0, -1.0}; //ERROR
             }
             mNumberOfClassifierCalls++;
             Log.e(TAG, "Classifier Output: [#" + String.valueOf(mNumberOfClassifierCalls) + "::" + String.valueOf(Y[0]) + "," + String.valueOf(Y[1]) + "]");
