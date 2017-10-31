@@ -29,6 +29,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
@@ -36,7 +37,10 @@ import android.widget.ToggleButton;
 import com.androidplot.Plot;
 import com.androidplot.util.Redrawer;
 import com.beele.BluetoothLe;
+import com.google.common.primitives.Floats;
 import com.opencsv.CSVWriter;
+
+import org.tensorflow.contrib.android.TensorFlowInferenceInterface;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -122,6 +126,20 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private boolean fileSaveInitialized = false;
     private CSVWriter csvWriter;
     private File file;
+    //Tensorflow stuff:
+    private TensorFlowInferenceInterface mTFInferenceInterface;
+    //INPUT STRING CONSTANTS:
+    public static final String INPUT_DATA_FEED = "input";
+    public static final String OUTPUT_DATA_FEED = "output";
+    public static final int WINDOW_DIMENSION_LENGTH_NORMAL = 300;
+    public static final int WINDOW_DIMENSION_LENGTH = WINDOW_DIMENSION_LENGTH_NORMAL*2;
+    public static final int WINDOW_DIMENSION_WIDTH = 1;
+    String[] mOutputScoresNames;
+    // TODO: 10/30/2017 Some helper class like RecognizeCommands from the speech example?
+    private boolean mTFRunModel = false;
+        //Directories:
+    private static final String[] LABELS = {"Alpha","15.15Hz","16.67Hz","18.51Hz", "20.00Hz"};
+    private static final String MODEL_FILENAME = "file:///android_asset/opt_ssvep_net.pb";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -166,42 +184,30 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         ab.setSubtitle(mDeviceAddress);
         //Initialize Bluetooth
         if(!mBleInitializedBoolean) initializeBluetoothArray();
-        mExportButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    terminateDataFileWriter();
-                } catch (IOException e) {
-                    Log.e(TAG, "IOException in saveDataFile");
-                    e.printStackTrace();
-                }
-                Context context = getApplicationContext();
-                Uri uii = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
-                Intent exportData = new Intent(Intent.ACTION_SEND);
-                exportData.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                exportData.putExtra(Intent.EXTRA_SUBJECT, "Sensor Data Export Details");
-                exportData.putExtra(Intent.EXTRA_STREAM, uii);
-                exportData.setType("text/html");
-                startActivity(exportData);
-            }
-        });
+        mMediaBeep = MediaPlayer.create(this, R.raw.beep_01a);
         mSButton = findViewById(R.id.buttonS);
         mFButton = findViewById(R.id.buttonF);
         mLButton = findViewById(R.id.buttonL);
         mRButton = findViewById(R.id.buttonR);
-        makeFilterSwitchVisible(false);
+        Button resetButton = findViewById(R.id.resetActivityButton);
+        Switch mTensorflowSwitch = findViewById(R.id.tensorflowClassificationSwitch);
+        changeUIElementVisibility(false);
         mLastTime = System.currentTimeMillis();
         mSSVEPClassTextView = findViewById(R.id.eegClassTextView);
+        // Initialize Tensorflow Inference Interface
+        mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILENAME);
+        mOutputScoresNames = new String[] { OUTPUT_DATA_FEED };
+
+        //UI Listeners
         ToggleButton toggleButton1 = findViewById(R.id.toggleButtonWheelchairControl);
         toggleButton1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 mWheelchairControl = b;
                 executeWheelchairCommand(0);
-                makeFilterSwitchVisible(b);
+                changeUIElementVisibility(b);
             }
         });
-
         ToggleButton ch1 = findViewById(R.id.toggleButtonCh1);
         ch1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -218,14 +224,20 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 mGraphAdapterCh2PSDA.setPlotData(b);
             }
         });
-        Button resetButton = findViewById(R.id.resetActivityButton);
+        mTensorflowSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                mTFRunModel = b;
+                //Reset counter:
+                mNumberOfClassifierCalls = 1;
+            }
+        });
         resetButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 resetActivity();
             }
         });
-        mMediaBeep = MediaPlayer.create(this, R.raw.beep_01a);
         mSButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -248,6 +260,25 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             @Override
             public void onClick(View view) {
                 executeWheelchairCommand(2);
+            }
+        });
+        mExportButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    terminateDataFileWriter();
+                } catch (IOException e) {
+                    Log.e(TAG, "IOException in saveDataFile");
+                    e.printStackTrace();
+                }
+                Context context = getApplicationContext();
+                Uri uii = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
+                Intent exportData = new Intent(Intent.ACTION_SEND);
+                exportData.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                exportData.putExtra(Intent.EXTRA_SUBJECT, "Sensor Data Export Details");
+                exportData.putExtra(Intent.EXTRA_STREAM, uii);
+                exportData.setType("text/html");
+                startActivity(exportData);
             }
         });
     }
@@ -331,7 +362,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     @Override
     protected void onPause() {
         if (redrawer != null) redrawer.pause();
-        makeFilterSwitchVisible(false);
+        changeUIElementVisibility(false);
         super.onPause();
     }
 
@@ -414,10 +445,10 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
 
     private void setupGraph() {
         // Initialize our XYPlot reference:
-        mGraphAdapterCh1 = new GraphAdapter(mSampleRate * 4, "EEG Data Ch 1", false, Color.BLUE, mSampleRate * 4); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
-        mGraphAdapterCh2 = new GraphAdapter(mSampleRate * 4, "EEG Data Ch 2", false, Color.RED, mSampleRate * 4); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
-        mGraphAdapterCh1PSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (Ch1)", false, Color.BLUE, 0);
-        mGraphAdapterCh2PSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (Ch2)", false, Color.RED, 0);
+        mGraphAdapterCh1 = new GraphAdapter(mSampleRate * 4, "EEG Data Ch 1", false, Color.BLUE); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
+        mGraphAdapterCh2 = new GraphAdapter(mSampleRate * 4, "EEG Data Ch 2", false, Color.RED); //Color.parseColor("#19B52C") also, RED, BLUE, etc.
+        mGraphAdapterCh1PSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (Ch1)", false, Color.BLUE);
+        mGraphAdapterCh2PSDA = new GraphAdapter(mPSDDataPointsToShow, "EEG Power Spectrum (Ch2)", false, Color.RED);
         //PLOT CH1 By default
         mGraphAdapterCh1.plotData = true;
         mGraphAdapterCh1PSDA.plotData = true;
@@ -589,7 +620,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         }
     }
 
-    private void makeFilterSwitchVisible(final boolean visible) {
+    private void changeUIElementVisibility(final boolean visible) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -627,8 +658,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     @Override
     public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
         if ((mCh1 == null || mCh2 == null)) {
-            mCh1 = new DataChannel(false, mMSBFirst);
-            mCh2 = new DataChannel(false, mMSBFirst);
+            mCh1 = new DataChannel(false, mMSBFirst, 4*mSampleRate);
+            mCh2 = new DataChannel(false, mMSBFirst, 4*mSampleRate);
         }
 
         if (AppConstant.CHAR_BATTERY_LEVEL.equals(characteristic.getUuid())) {
@@ -673,9 +704,32 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 writeToDisk24(mCh1.characteristicDataPacketBytes, mCh2.characteristicDataPacketBytes);
             }
             if (mNumber2ChPackets % 10 == 0) { //Every x * 6 data points
-                Thread classifyTaskThread = new Thread(mClassifyTaskRunnableThread);
-                classifyTaskThread.start();
-                Log.e(TAG, "[" + String.valueOf(mNumberOfClassifierCalls + 1) + "] CALLING CLASSIFIER FUNCTION!");
+                if(!mTFRunModel) {
+                    Thread classifyTaskThread = new Thread(mClassifyTaskRunnableThread);
+                    classifyTaskThread.start();
+                    Log.e(TAG, "[" + String.valueOf(mNumberOfClassifierCalls + 1) + "] CALLING CLASSIFIER FUNCTION!");
+                } else {
+                    //Run TF Model: SEE ORIGINAL .py SCRIPT TO VERIFY CORRECT INPUTS!
+                    float[] outputScores = new float[5];//5 is number of classes/labels
+                    float[] ch1_doubles = new float[WINDOW_DIMENSION_LENGTH_NORMAL];
+                    System.arraycopy(mCh1.classificationBufferFloats,
+                            mCh1.classificationBufferSize-WINDOW_DIMENSION_LENGTH_NORMAL-1,
+                            ch1_doubles, 0, WINDOW_DIMENSION_LENGTH_NORMAL);
+                    float[] ch2_doubles = new float[WINDOW_DIMENSION_LENGTH_NORMAL];
+                    System.arraycopy(mCh2.classificationBufferFloats,
+                            mCh2.classificationBufferSize-WINDOW_DIMENSION_LENGTH_NORMAL-1,
+                            ch2_doubles, 0, WINDOW_DIMENSION_LENGTH_NORMAL);
+                    float[] mSSVEPDataFeedTF = Floats.concat(ch1_doubles, ch2_doubles);
+                    // 1 - feed probabilities:
+                    Log.i(TAG, "onCharacteristicChanged: TF_PRECALL_TIME, N#"+String.valueOf(mNumberOfClassifierCalls));
+                    mTFInferenceInterface.feed("keep_prob", new float[] { 1 });
+                    mTFInferenceInterface.feed(INPUT_DATA_FEED, mSSVEPDataFeedTF, WINDOW_DIMENSION_WIDTH, WINDOW_DIMENSION_LENGTH);
+                    mTFInferenceInterface.run(mOutputScoresNames);
+                    mTFInferenceInterface.fetch(OUTPUT_DATA_FEED, outputScores);
+                    Log.i(TAG, "[CALL#"+String.valueOf(mNumberOfClassifierCalls)+"]LABELS: "+ Arrays.toString(LABELS));
+                    Log.d(TAG, "TF outputScores: " + Arrays.toString(outputScores));
+                    mNumberOfClassifierCalls++;
+                }
             }
         }
 
@@ -724,8 +778,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             double[] PSDCh2 = new double[mSampleRate];
             double[] getInstancePSD1 = new double[mSampleRate * 2];
             double[] getInstancePSD2 = new double[mSampleRate * 2];
-            System.arraycopy(mGraphAdapterCh1.classificationBuffer, mSampleRate * 2, getInstancePSD1, 0, mSampleRate * 2);
-            System.arraycopy(mGraphAdapterCh2.classificationBuffer, mSampleRate * 2, getInstancePSD2, 0, mSampleRate * 2);
+            System.arraycopy(mCh1.classificationBuffer, mSampleRate * 2, getInstancePSD1, 0, mSampleRate * 2);
+            System.arraycopy(mCh2.classificationBuffer, mSampleRate * 2, getInstancePSD2, 0, mSampleRate * 2);
             if(mSampleRate <8000) {
                 PSD2ch = jPSDExtraction(getInstancePSD1, getInstancePSD2, mSampleRate); //250 Hz: For PSDA/each channel[0>mSampleRate|mSampleRate:end]
                 System.arraycopy(PSD2ch, 0, PSDCh1, 0, mSampleRate);
@@ -750,15 +804,15 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             if (mSampleRate == 250) {
                 double[] getInstance1 = new double[mSampleRate * 2];
                 double[] getInstance2 = new double[mSampleRate * 2];
-                System.arraycopy(mGraphAdapterCh1.classificationBuffer, mSampleRate * 2, getInstance1, 0, mSampleRate * 2); //8000→end
-                System.arraycopy(mGraphAdapterCh2.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2);
+                System.arraycopy(mCh1.classificationBuffer, mSampleRate * 2, getInstance1, 0, mSampleRate * 2); //8000→end
+                System.arraycopy(mCh2.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2);
                 Y = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
             } else if (mSampleRate == 4000) {
                 //require last 8k pts:
                 double[] getInstance1 = new double[mSampleRate * 2];
                 double[] getInstance2 = new double[mSampleRate * 2];
-                System.arraycopy(mGraphAdapterCh1.classificationBuffer, mSampleRate * 2, getInstance1, 0, mSampleRate * 2); //8000→end
-                System.arraycopy(mGraphAdapterCh2.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2);
+                System.arraycopy(mCh1.classificationBuffer, mSampleRate * 2, getInstance1, 0, mSampleRate * 2); //8000→end
+                System.arraycopy(mCh2.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2);
                 Y = jClassifySSVEP4k(getInstance1, getInstance2, 1.5);
             } else {
                 Y = new double[]{0.0, 0.0};

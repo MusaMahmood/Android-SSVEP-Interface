@@ -14,11 +14,18 @@ class DataChannel {
     short packetCounter;
     int totalDataPointsReceived;
     byte[] dataBuffer;
+    //Classification:
+    int classificationBufferSize;
+    double[] classificationBuffer;
+    float[] classificationBufferFloats;
 
-    DataChannel(boolean chEnabled, boolean MSBFirst) {
+    DataChannel(boolean chEnabled, boolean MSBFirst, int classificationBufferSize) {
         this.packetCounter = 0;
         this.totalDataPointsReceived = 0;
         this.chEnabled = chEnabled;
+        this.classificationBuffer = new double[classificationBufferSize];
+        this.classificationBufferFloats = new float[classificationBufferSize];
+        this.classificationBufferSize = classificationBufferSize;
         setMSBFirst(MSBFirst);
     }
 
@@ -39,17 +46,21 @@ class DataChannel {
         } else {
             this.dataBuffer = newDataPacket;
         }
+        for (int i = 0; i < newDataPacket.length/3; i++) {
+            addToBuffer(bytesToDouble(newDataPacket[3*i], newDataPacket[3*i+1], newDataPacket[3*i+2]));
+        }
         this.totalDataPointsReceived += newDataPacket.length / 3;
         this.packetCounter++;
     }
 
-//    void addToGraphBuffer(GraphAdapter graphAdapter) {
-//        for (int i = 0; i < this.dataBuffer.length / 3; i+=graphAdapter.sampleRate/250) {
-//            graphAdapter.addDataPoint(bytesToDouble(this.dataBuffer[3 * i], this.dataBuffer[3 * i + 1], this.dataBuffer[3 * i + 2]), this.totalDataPointsReceived - this.dataBuffer.length / 3 + i);
-//        }
-//        this.dataBuffer = null;
-//        this.packetCounter = 0;
-//    }
+    private void addToBuffer(double a) {
+        if(this.classificationBuffer!=null && this.classificationBufferSize>0) {
+            System.arraycopy(this.classificationBuffer, 1, this.classificationBuffer, 0, this.classificationBufferSize-1); //shift backwards
+            System.arraycopy(this.classificationBufferFloats, 1, this.classificationBufferFloats, 0, this.classificationBufferSize-1); //shift backwards
+            this.classificationBuffer[this.classificationBufferSize-1] = a; //add to front:
+            this.classificationBufferFloats[this.classificationBufferSize-1] = (float)a;
+        }
+    }
 
     static double bytesToDouble(byte a1, byte a2) {
         int unsigned = unsignedBytesToInt(a1, a2, MSBFirst);
