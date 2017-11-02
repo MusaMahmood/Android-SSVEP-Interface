@@ -44,5 +44,6 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.yeolabgt.mahmoodms.androidssvepinterfacetf.MainActivity" />
         </activity>
+
     </application>
 </manifest>

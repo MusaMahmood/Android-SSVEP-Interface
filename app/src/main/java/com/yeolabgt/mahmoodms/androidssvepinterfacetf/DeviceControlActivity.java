@@ -72,8 +72,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     public static Redrawer redrawer;
     // Power Spectrum Graph Data:
     private static double[] fPSD;
-    private static double[] PSDCh1;
-    private static double[] PSDCh2;
+    private static double[] mPSDCh1;
+    private static double[] mPSDCh2;
     private static int mPSDDataPointsToShow = 0;
     static int fPSDStartIndex = 16;
     static int fPSDEndIndex = 44;
@@ -421,6 +421,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         }
         mBluetoothLe = new BluetoothLe(this, mBluetoothManager, this);
         for (int i = 0; i < mBluetoothDeviceArray.length; i++) {
+
             mBluetoothGattArray[i] = mBluetoothLe.connect(mBluetoothDeviceArray[i], false);
             Log.e(TAG, "Connecting to Device: " + String.valueOf(mBluetoothDeviceArray[i].getName() + " " + mBluetoothDeviceArray[i].getAddress()));
             if ("WheelchairControl".equals(mBluetoothDeviceArray[i].getName())) {
@@ -432,8 +433,10 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 mMSBFirst = false;
             } else if ("EMG 3CH 250Hz".equals(mBluetoothDeviceArray[i].getName())) {
                 mMSBFirst = true;
-            } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("nRF52".toLowerCase())) {
-                mMSBFirst = true;
+            } else if (mBluetoothDeviceArray[i].getName()!=null) {
+                if(mBluetoothDeviceArray[i].getName().toLowerCase().contains("nRF52".toLowerCase())) {
+                    mMSBFirst = true;
+                }
             }
             if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("8k".toLowerCase())) {
                 mSampleRate = 8000;
@@ -590,8 +593,15 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 NavUtils.navigateUpFromSameTask(this);
                 onBackPressed();
                 return true;
+            case R.id.action_settings:
+//                launchSettingsMenu();
+                return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void launchSettingsMenu() {
+//        Intent intent = new Intent(this, )
     }
 
     private void connect() {
@@ -790,19 +800,19 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
 
     private static void runPowerSpectrum() {
         double[] Combined2ChPSDArray;
-        PSDCh1 = new double[mSampleRate];
-        PSDCh2 = new double[mSampleRate];
+        mPSDCh1 = new double[mSampleRate];
+        mPSDCh2 = new double[mSampleRate];
         double[] getInstancePSD1 = new double[mSampleRate * 2];
         double[] getInstancePSD2 = new double[mSampleRate * 2];
         System.arraycopy(mCh1.classificationBuffer, mSampleRate * 2, getInstancePSD1, 0, mSampleRate * 2);
         System.arraycopy(mCh2.classificationBuffer, mSampleRate * 2, getInstancePSD2, 0, mSampleRate * 2);
         if(mSampleRate <8000) {
             Combined2ChPSDArray = jPSDExtraction(getInstancePSD1, getInstancePSD2, mSampleRate, (getInstancePSD1.length==getInstancePSD2.length)?(getInstancePSD1.length):0); //250 Hz: For PSDA/each channel[0>mSampleRate|mSampleRate:end]
-            System.arraycopy(Combined2ChPSDArray, 0, PSDCh1, 0, mSampleRate);
-            System.arraycopy(Combined2ChPSDArray, mSampleRate, PSDCh2, 0, mSampleRate);
+            System.arraycopy(Combined2ChPSDArray, 0, mPSDCh1, 0, mSampleRate);
+            System.arraycopy(Combined2ChPSDArray, mSampleRate, mPSDCh2, 0, mSampleRate);
         } else {
-            Arrays.fill(PSDCh1,0.0);
-            Arrays.fill(PSDCh2,0.0);
+            Arrays.fill(mPSDCh1,0.0);
+            Arrays.fill(mPSDCh2,0.0);
         }
     }
 
@@ -812,8 +822,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             mGraphAdapterCh2PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
             if (mPSDDataPointsToShow > 64) mFreqDomainPlotAdapter.setXyPlotDomainIncrement(6.0);
             else mFreqDomainPlotAdapter.setXyPlotDomainIncrement(2.0);
-        mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD, PSDCh1, fPSDStartIndex, fPSDEndIndex);
-        mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD, PSDCh2, fPSDStartIndex, fPSDEndIndex);
+        mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD, mPSDCh1, fPSDStartIndex, fPSDEndIndex);
+        mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD, mPSDCh2, fPSDStartIndex, fPSDEndIndex);
     }
 
     private Runnable mClassifyTaskRunnableThread = new Runnable() {
