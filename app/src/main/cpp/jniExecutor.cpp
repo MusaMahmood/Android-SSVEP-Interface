@@ -52,18 +52,20 @@ Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jClass
 extern "C" {
 JNIEXPORT jdoubleArray JNICALL
 Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jPSDExtraction(
-        JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2, jint sampleRate) {
-    jdouble *X1 = env->GetDoubleArrayElements(ch1, NULL);
-    jdouble *X2 = env->GetDoubleArrayElements(ch2, NULL);
-    if (X1 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
-    if (X2 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
-    jdoubleArray m_result = env->NewDoubleArray(sampleRate*2);
-    int size_array = sampleRate*2; //2s of data (X1 and X2)
-    double Y[sampleRate*2];
-    int PSD_size[2];
-    extractPowerSpectrum(X1, &size_array, X2, &size_array, sampleRate, &Y[0], PSD_size);
-    env->SetDoubleArrayRegion(m_result, 0, sampleRate*2, Y);
-    return m_result;
+        JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2, jint sampleRate, jint length) {
+    jdouble *X1 = env->GetDoubleArrayElements(ch1, NULL); if (X1 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
+    jdouble *X2 = env->GetDoubleArrayElements(ch2, NULL); if (X2 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
+    if(length==0) {
+        LOGE("ERROR: LENGTH INVALID");
+        return nullptr;
+    } else {
+        jdoubleArray m_result = env->NewDoubleArray(length);
+        double Y[length/2*2]; //Divide by two for normal length, but we are looking at 2 vectors.
+        int PSD_size[2];
+        extractPowerSpectrum(X1, &length, X2, &length, sampleRate, &Y[0], PSD_size);
+        env->SetDoubleArrayRegion(m_result, 0, sampleRate*2, Y);
+        return m_result;
+    }
 }
 }
 

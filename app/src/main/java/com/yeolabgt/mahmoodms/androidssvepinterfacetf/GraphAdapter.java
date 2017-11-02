@@ -84,9 +84,12 @@ class GraphAdapter {
     }
 
     private void plot(double x, double y) {
-        if(series.size()>seriesHistoryDataPoints-1) {
+        while (series.size()>seriesHistoryDataPoints-1) {
             series.removeFirst();
         }
+//        if(series.size()>seriesHistoryDataPoints-1) {
+//            series.removeFirst();
+//        }
         series.addLast(x,y);
     }
 }

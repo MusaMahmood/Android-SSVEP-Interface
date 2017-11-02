@@ -17,6 +17,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -50,6 +51,8 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 
+import static android.os.AsyncTask.THREAD_POOL_EXECUTOR;
+
 /**
  * Created by mahmoodms on 5/31/2016.
  * Android Activity for Controlling Bluetooth LE Device Connectivity
@@ -57,41 +60,47 @@ import java.util.Locale;
 
 public class DeviceControlActivity extends Activity implements BluetoothLe.BluetoothLeListener {
     public static final String HZ = "0 Hz";
+    private final static String TAG = DeviceControlActivity.class.getSimpleName();
     // Graphing Variables:
     private boolean mGraphInitializedBoolean = false;
     private GraphAdapter mGraphAdapterCh1;
     private GraphAdapter mGraphAdapterCh2;
-    private GraphAdapter mGraphAdapterCh1PSDA;
-    private GraphAdapter mGraphAdapterCh2PSDA;
+    static private GraphAdapter mGraphAdapterCh1PSDA;
+    static private GraphAdapter mGraphAdapterCh2PSDA;
     public XYPlotAdapter mTimeDomainPlotAdapter;
-    public XYPlotAdapter mFreqDomainPlotAdapter;
-    private double[] fPSD;
-    private int mSampleRate = 250;
+    static public XYPlotAdapter mFreqDomainPlotAdapter;
     public static Redrawer redrawer;
-    private final static String TAG = DeviceControlActivity.class.getSimpleName();
-    //Refactored Data Channel Classes
-    DataChannel mCh1;
-    DataChannel mCh2;
-    boolean mMSBFirst = false;
-    //LocalVars
+    // Power Spectrum Graph Data:
+    private static double[] fPSD;
+    private static double[] PSDCh1;
+    private static double[] PSDCh2;
+    private static int mPSDDataPointsToShow = 0;
+    static int fPSDStartIndex = 16;
+    static int fPSDEndIndex = 44;
+    //Device Information
+    private boolean mBleInitializedBoolean = false;
+    private BluetoothLe mBluetoothLe;
     private String mDeviceName;
     private String mDeviceAddress;
     private boolean mConnected;
-    private boolean mRunTrainingBool;
-    //Class instance variable
-    private boolean mBleInitializedBoolean = false;
-    private BluetoothLe mBluetoothLe;
+    private static int mSampleRate = 250;
+    private int byteResolution = 3;
+    boolean mMSBFirst = false;
     //Connecting to Multiple Devices
     private String[] deviceMacAddresses = null;
     private BluetoothGatt[] mBluetoothGattArray = null;
     private BluetoothGattService mLedWheelchairControlService = null;
     private int mWheelchairGattIndex;
     private boolean mEEGConnected_2ch = false;
+    //Data Channel Classes
+    static DataChannel mCh1;
+    static DataChannel mCh2;
     // Classification
     private int mNumber2ChPackets = -1;
     private static int mPacketBuffer = 6;
     private int mNumberOfClassifierCalls = 0;
-    //Layout - TextViews and Buttons
+    private boolean mRunTrainingBool;
+    //UI Elements - TextViews, Buttons, etc
     private TextView mTrainingInstructions;
     private TextView mBatteryLevel;
     private TextView mDataRate;
@@ -102,13 +111,10 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private Button mFButton;
     private Button mLButton;
     private Button mRButton;
-    private long mLastTime;
-    private int mPSDDataPointsToShow = 0;
-    int fPSDStartIndex = 0;
-    int fPSDEndIndex = 100;
-    private int byteResolution = 3;
-    private int points = 0;
     private Menu menu;
+    //Data throughput counter
+    private long mLastTime;
+    private int points = 0;
     //RSSI:
     private static final int RSSI_UPDATE_TIME_INTERVAL = 2000;
     private Handler mTimerHandler = new Handler();
@@ -126,19 +132,19 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private boolean fileSaveInitialized = false;
     private CSVWriter csvWriter;
     private File file;
-    //Tensorflow stuff:
+    //Tensorflow:
+    private boolean mTFRunModel = false;
     private TensorFlowInferenceInterface mTFInferenceInterface;
-    //INPUT STRING CONSTANTS:
+    //Tensorflow CONSTANTS:
     public static final String INPUT_DATA_FEED = "input";
     public static final String OUTPUT_DATA_FEED = "output";
     public static final int WINDOW_DIMENSION_LENGTH_NORMAL = 300;
     public static final int WINDOW_DIMENSION_LENGTH = WINDOW_DIMENSION_LENGTH_NORMAL*2;
     public static final int WINDOW_DIMENSION_WIDTH = 1;
-    String[] mOutputScoresNames;
     // TODO: 10/30/2017 Some helper class like RecognizeCommands from the speech example?
-    private boolean mTFRunModel = false;
-        //Directories:
     private static final String[] LABELS = {"Alpha","15.15Hz","16.67Hz","18.51Hz", "20.00Hz"};
+    private String[] mOutputScoresNames;
+    //Directory:
     private static final String MODEL_FILENAME = "file:///android_asset/opt_ssvep_net.pb";
 
     @Override
@@ -225,8 +231,15 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         ch2.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                mGraphAdapterCh1PSDA.setPlotData(b);
-                mGraphAdapterCh2PSDA.setPlotData(b);
+//                mGraphAdapterCh1PSDA.setPlotData(b);
+//                mGraphAdapterCh2PSDA.setPlotData(b);
+                if(b) {
+                    fPSDStartIndex = 0;
+                    fPSDEndIndex = 249;
+                } else {
+                    fPSDStartIndex = 16;
+                    fPSDEndIndex = 44;
+                }
             }
         });
         mTensorflowSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -282,7 +295,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         mExportButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                exportData();
             }
         });
     }
@@ -439,11 +452,9 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 mSampleRate = 250;
                 mPacketBuffer = 2;
             }
-            fPSDStartIndex = 16;
-            fPSDEndIndex = 80;
             Log.e(TAG, "mSampleRate: " + mSampleRate + "Hz");
             fPSD = jLoadfPSD(mSampleRate);
-
+            Log.d(TAG, "initializeBluetoothArray: jLoadfPSD: "+String.valueOf(fPSD.length));
             if(!mGraphInitializedBoolean) setupGraph();
 
             mGraphAdapterCh1.setxAxisIncrementFromSampleRate(mSampleRate);
@@ -708,33 +719,16 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 writeToDisk24(mCh1.characteristicDataPacketBytes, mCh2.characteristicDataPacketBytes);
             }
             if (mNumber2ChPackets % 10 == 0) { //Every x * 6 data points
-                if(!mTFRunModel) {
-                    Thread classifyTaskThread = new Thread(mClassifyTaskRunnableThread);
-                    classifyTaskThread.start();
-                    Log.e(TAG, "[" + String.valueOf(mNumberOfClassifierCalls + 1) + "] CALLING CLASSIFIER FUNCTION!");
-                } else {
-                    //Run TF Model: SEE ORIGINAL .py SCRIPT TO VERIFY CORRECT INPUTS!
-                    float[] outputScores = new float[5];//5 is number of classes/labels
-                    float[] ch1_doubles = new float[WINDOW_DIMENSION_LENGTH_NORMAL];
-                    System.arraycopy(mCh1.classificationBufferFloats,
-                            mCh1.classificationBufferSize-WINDOW_DIMENSION_LENGTH_NORMAL-1,
-                            ch1_doubles, 0, WINDOW_DIMENSION_LENGTH_NORMAL);
-                    float[] ch2_doubles = new float[WINDOW_DIMENSION_LENGTH_NORMAL];
-                    System.arraycopy(mCh2.classificationBufferFloats,
-                            mCh2.classificationBufferSize-WINDOW_DIMENSION_LENGTH_NORMAL-1,
-                            ch2_doubles, 0, WINDOW_DIMENSION_LENGTH_NORMAL);
-                    float[] mSSVEPDataFeedTF = Floats.concat(ch1_doubles, ch2_doubles);
-                    // 1 - feed probabilities:
-                    Log.i(TAG, "onCharacteristicChanged: TF_PRECALL_TIME, N#"+String.valueOf(mNumberOfClassifierCalls));
-                    mTFInferenceInterface.feed("keep_prob", new float[] { 1 });
-                    mTFInferenceInterface.feed(INPUT_DATA_FEED, mSSVEPDataFeedTF, WINDOW_DIMENSION_WIDTH, WINDOW_DIMENSION_LENGTH);
-                    mTFInferenceInterface.run(mOutputScoresNames);
-                    mTFInferenceInterface.fetch(OUTPUT_DATA_FEED, outputScores);
-                    Log.i(TAG, "[CALL#"+String.valueOf(mNumberOfClassifierCalls)+"]LABELS: "+ Arrays.toString(LABELS));
-                    Log.d(TAG, "TF outputScores: " + Arrays.toString(outputScores));
-                    mNumberOfClassifierCalls++;
-                }
+                Thread classifyTaskThread = new Thread(mClassifyTaskRunnableThread);
+                classifyTaskThread.start();
+                Log.e(TAG, "[" + String.valueOf(mNumberOfClassifierCalls + 1) + "] CALLING CLASSIFIER FUNCTION!");
             }
+//            if (mNumber2ChPackets % 5 == 0) {
+//                Thread analyseThread = new Thread(mRunPowerSpectumAnalysis);
+//                analyseThread.start();
+            PowerSpectrumAsyncTask powerSpectrumAsyncTask = new PowerSpectrumAsyncTask();
+            powerSpectrumAsyncTask.executeOnExecutor(THREAD_POOL_EXECUTOR);
+//            }
         }
 
         runOnUiThread(new Runnable() {
@@ -773,64 +767,113 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         dataChannel.dataBuffer = null;
         dataChannel.packetCounter = 0;
     }
+    //Put in Async task?
+    private static class PowerSpectrumAsyncTask extends AsyncTask<Void, Void, Void> {
+        @Override
+        protected Void doInBackground(Void... voids) {
+            runPowerSpectrum();
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+            powerSpectrumUpdateUI();
+        }
+    }
+
+    private static void runPowerSpectrum() {
+        double[] Combined2ChPSDArray;
+        PSDCh1 = new double[mSampleRate];
+        PSDCh2 = new double[mSampleRate];
+        double[] getInstancePSD1 = new double[mSampleRate * 2];
+        double[] getInstancePSD2 = new double[mSampleRate * 2];
+        System.arraycopy(mCh1.classificationBuffer, mSampleRate * 2, getInstancePSD1, 0, mSampleRate * 2);
+        System.arraycopy(mCh2.classificationBuffer, mSampleRate * 2, getInstancePSD2, 0, mSampleRate * 2);
+        if(mSampleRate <8000) {
+            Combined2ChPSDArray = jPSDExtraction(getInstancePSD1, getInstancePSD2, mSampleRate, (getInstancePSD1.length==getInstancePSD2.length)?(getInstancePSD1.length):0); //250 Hz: For PSDA/each channel[0>mSampleRate|mSampleRate:end]
+            System.arraycopy(Combined2ChPSDArray, 0, PSDCh1, 0, mSampleRate);
+            System.arraycopy(Combined2ChPSDArray, mSampleRate, PSDCh2, 0, mSampleRate);
+        } else {
+            Arrays.fill(PSDCh1,0.0);
+            Arrays.fill(PSDCh2,0.0);
+        }
+    }
+
+    private static void powerSpectrumUpdateUI() {
+//        if (mPSDDataPointsToShow == 0) {
+            mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex;
+            mGraphAdapterCh1PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
+            mGraphAdapterCh2PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
+            if (mPSDDataPointsToShow > 64)
+                mFreqDomainPlotAdapter.setXyPlotDomainIncrement(6.0);
+            else mFreqDomainPlotAdapter.setXyPlotDomainIncrement(2.0);
+//        }
+        mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD, PSDCh1, fPSDStartIndex, fPSDEndIndex);
+        mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD, PSDCh2, fPSDStartIndex, fPSDEndIndex);
+    }
+
+    private Runnable mRunPowerSpectumAnalysis = new Runnable() {
+        @Override
+        public void run() {
+            runPowerSpectrum();
+        }
+    };
 
     private Runnable mClassifyTaskRunnableThread = new Runnable() {
         @Override
         public void run() {
-            double[] PSD2ch;
-            double[] PSDCh1 = new double[mSampleRate];
-            double[] PSDCh2 = new double[mSampleRate];
-            double[] getInstancePSD1 = new double[mSampleRate * 2];
-            double[] getInstancePSD2 = new double[mSampleRate * 2];
-            System.arraycopy(mCh1.classificationBuffer, mSampleRate * 2, getInstancePSD1, 0, mSampleRate * 2);
-            System.arraycopy(mCh2.classificationBuffer, mSampleRate * 2, getInstancePSD2, 0, mSampleRate * 2);
-            if(mSampleRate <8000) {
-                PSD2ch = jPSDExtraction(getInstancePSD1, getInstancePSD2, mSampleRate); //250 Hz: For PSDA/each channel[0>mSampleRate|mSampleRate:end]
-                System.arraycopy(PSD2ch, 0, PSDCh1, 0, mSampleRate);
-                System.arraycopy(PSD2ch, mSampleRate, PSDCh2, 0, mSampleRate);
-            } else {
-                Arrays.fill(PSDCh1,0.0);
-                Arrays.fill(PSDCh2,0.0);
-            }
-
-            if (mPSDDataPointsToShow == 0) {
-                mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex;
-                mGraphAdapterCh1PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
-                mGraphAdapterCh2PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
-                if (mPSDDataPointsToShow > 64)
-                    mFreqDomainPlotAdapter.setXyPlotDomainIncrement(6.0);
-                else mFreqDomainPlotAdapter.setXyPlotDomainIncrement(2.0);
-            }
-            mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD, PSDCh1, fPSDStartIndex, fPSDEndIndex);
-            mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD, PSDCh2, fPSDStartIndex, fPSDEndIndex);
-            //TODO: Move TF Classifier Here
             double Y[];
-            if (mSampleRate == 250) {
-                double[] getInstance1 = new double[mSampleRate * 2];
-                double[] getInstance2 = new double[mSampleRate * 2];
-                System.arraycopy(mCh1.classificationBuffer, mSampleRate * 2, getInstance1, 0, mSampleRate * 2); //8000→end
-                System.arraycopy(mCh2.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2);
-                Y = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
-            } else if (mSampleRate == 4000) {
-                //require last 8k pts:
-                double[] getInstance1 = new double[mSampleRate * 2];
-                double[] getInstance2 = new double[mSampleRate * 2];
-                System.arraycopy(mCh1.classificationBuffer, mSampleRate * 2, getInstance1, 0, mSampleRate * 2); //8000→end
-                System.arraycopy(mCh2.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2);
-                Y = jClassifySSVEP4k(getInstance1, getInstance2, 1.5);
+            //TODO: Move TF Classifier Here
+            if(mTFRunModel) {
+                //Run TF Model: SEE ORIGINAL .py SCRIPT TO VERIFY CORRECT INPUTS!
+                float[] outputScores = new float[5];//5 is number of classes/labels
+                float[] ch1_doubles = new float[WINDOW_DIMENSION_LENGTH_NORMAL];
+                System.arraycopy(mCh1.classificationBufferFloats,
+                        mCh1.classificationBufferSize-WINDOW_DIMENSION_LENGTH_NORMAL-1,
+                        ch1_doubles, 0, WINDOW_DIMENSION_LENGTH_NORMAL);
+                float[] ch2_doubles = new float[WINDOW_DIMENSION_LENGTH_NORMAL];
+                System.arraycopy(mCh2.classificationBufferFloats,
+                        mCh2.classificationBufferSize-WINDOW_DIMENSION_LENGTH_NORMAL-1,
+                        ch2_doubles, 0, WINDOW_DIMENSION_LENGTH_NORMAL);
+                float[] mSSVEPDataFeedTF = Floats.concat(ch1_doubles, ch2_doubles);
+                // 1 - feed probabilities:
+                Log.i(TAG, "onCharacteristicChanged: TF_PRECALL_TIME, N#"+String.valueOf(mNumberOfClassifierCalls));
+                mTFInferenceInterface.feed("keep_prob", new float[] { 1 });
+                mTFInferenceInterface.feed(INPUT_DATA_FEED, mSSVEPDataFeedTF, WINDOW_DIMENSION_WIDTH, WINDOW_DIMENSION_LENGTH);
+                mTFInferenceInterface.run(mOutputScoresNames);
+                mTFInferenceInterface.fetch(OUTPUT_DATA_FEED, outputScores);
+                Log.i(TAG, "[CALL#"+String.valueOf(mNumberOfClassifierCalls)+"]LABELS: "+ Arrays.toString(LABELS));
+                Log.d(TAG, "TF outputScores: " + Arrays.toString(outputScores));
+                mNumberOfClassifierCalls++;
             } else {
-                Y = new double[]{-1.0, -1.0}; //ERROR
-            }
-            mNumberOfClassifierCalls++;
-            Log.e(TAG, "Classifier Output: [#" + String.valueOf(mNumberOfClassifierCalls) + "::" + String.valueOf(Y[0]) + "," + String.valueOf(Y[1]) + "]");
-            final String s = "SSVEP cPSDA\n: [" + String.valueOf(Y[1]) + "]";
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mYfitTextView.setText(s);
+                if (mSampleRate == 250) {
+                    double[] getInstance1 = new double[mSampleRate * 2];
+                    double[] getInstance2 = new double[mSampleRate * 2];
+                    System.arraycopy(mCh1.classificationBuffer, mSampleRate * 2, getInstance1, 0, mSampleRate * 2); //8000→end
+                    System.arraycopy(mCh2.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2);
+                    Y = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
+                } else if (mSampleRate == 4000) {
+                    //require last 8k pts:
+                    double[] getInstance1 = new double[mSampleRate * 2];
+                    double[] getInstance2 = new double[mSampleRate * 2];
+                    System.arraycopy(mCh1.classificationBuffer, mSampleRate * 2, getInstance1, 0, mSampleRate * 2); //8000→end
+                    System.arraycopy(mCh2.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2);
+                    Y = jClassifySSVEP4k(getInstance1, getInstance2, 1.5);
+                } else {
+                    Y = new double[]{-1.0, -1.0}; //ERROR
                 }
-            });
-            executeWheelchairCommand((int) (double) Y[1]);
+                mNumberOfClassifierCalls++;
+                Log.e(TAG, "Classifier Output: [#" + String.valueOf(mNumberOfClassifierCalls) + "::" + String.valueOf(Y[0]) + "," + String.valueOf(Y[1]) + "]");
+                final String s = "SSVEP cPSDA\n: [" + String.valueOf(Y[1]) + "]";
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mYfitTextView.setText(s);
+                    }
+                });
+                executeWheelchairCommand((int) (double) Y[1]);
+            }
         }
     };
 
@@ -1156,14 +1199,14 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         System.loadLibrary("ssvep-lib");
     }
 
-    public native int jmainInitialization(boolean b);
+    public static native int jmainInitialization(boolean b);
 
-    public native double[] jClassifySSVEP(double[] a, double[] b, double c);
+    public static native double[] jClassifySSVEP(double[] a, double[] b, double c);
 
-    public native double[] jClassifySSVEP4k(double[] a, double[] b, double c);
+    public static native double[] jClassifySSVEP4k(double[] a, double[] b, double c);
 
-    public native double[] jPSDExtraction(double[] a, double[] b, int sampleRate);
+    public static native double[] jPSDExtraction(double[] a, double[] b, int sampleRate, int len);
 
-    public native double[] jLoadfPSD(int sampleRate);
+    public static native double[] jLoadfPSD(int sampleRate);
 
 }
