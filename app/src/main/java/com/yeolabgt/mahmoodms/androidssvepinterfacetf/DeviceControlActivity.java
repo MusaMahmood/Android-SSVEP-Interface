@@ -141,7 +141,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     public static final int WINDOW_DIMENSION_LENGTH_NORMAL = 300;
     public static final int WINDOW_DIMENSION_LENGTH = WINDOW_DIMENSION_LENGTH_NORMAL*2;
     public static final int WINDOW_DIMENSION_WIDTH = 1;
-    // TODO: 10/30/2017 Some helper class like RecognizeCommands from the speech example?
     private static final String[] LABELS = {"Alpha","15.15Hz","16.67Hz","18.51Hz", "20.00Hz"};
     private String[] mOutputScoresNames;
     //Directory:
@@ -245,21 +244,34 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         mTensorflowSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                if(customModel.exists() && b) {
-                    mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), customModelPath);
-                    mNumberOfClassifierCalls = 1;
-                    mTFRunModel = true;
-                } else if (embeddedModel.exists()) {
-                    //Check if there's a model included:
-                    mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILENAME);
-                    mTFRunModel = true;
+                if(b) {
+                    if(customModel.exists()) {
+                        mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), customModelPath);
+                        //Reset counter:
+                        mNumberOfClassifierCalls = 1;
+                        mTFRunModel = true;
+                        Log.i(TAG, "Tensorflow: customModel loaded");
+                    } else if (embeddedModel.exists()) {
+                        //Check if there's a model included:
+                        mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILENAME);
+                        mTFRunModel = true;
+                        Log.i(TAG, "Tensorflow: embeddedModel loaded");
+                    } else {
+                        // No model found, continuing with original (reset switch)
+                        compoundButton.setChecked(false);
+                        mTFRunModel = false;
+                        Toast.makeText(getApplicationContext(), "No TF Model Found!", Toast.LENGTH_LONG).show();
+                    }
+                    if(mTFRunModel) {
+                        Toast.makeText(getApplicationContext(), "TF Model Loaded", Toast.LENGTH_SHORT).show();
+                    }
                 } else {
-                    // No model found, continuing with original (reset switch)
-                    compoundButton.setChecked(false);
+                    //Reset counter:
                     mTFRunModel = false;
-                    Toast.makeText(getApplicationContext(), "No TF Model Found!", Toast.LENGTH_LONG).show();
+                    mNumberOfClassifierCalls = 1;
+                    Toast.makeText(getApplicationContext(), "Using PSD Analysis", Toast.LENGTH_SHORT).show();
                 }
-                //Reset counter:
+
             }
         });
         resetButton.setOnClickListener(new View.OnClickListener() {
@@ -713,10 +725,9 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             if (mCh1.characteristicDataPacketBytes != null && mCh2.characteristicDataPacketBytes != null) {
                 writeToDisk24(mCh1.characteristicDataPacketBytes, mCh2.characteristicDataPacketBytes);
             }
-            if (mNumber2ChPackets % 10 == 0) { //Every x * 6 data points
+            if (mNumber2ChPackets % 10 == 0) { //Every x * 20 data points
                 Thread classifyTaskThread = new Thread(mClassifyTaskRunnableThread);
                 classifyTaskThread.start();
-                Log.e(TAG, "[" + String.valueOf(mNumberOfClassifierCalls + 1) + "] CALLING CLASSIFIER FUNCTION!");
             }
 //            if (mNumber2ChPackets % 5 == 0) {
 //                Thread analyseThread = new Thread(mRunPowerSpectumAnalysis);
@@ -809,7 +820,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         @Override
         public void run() {
             double Y[];
-            //TODO: Move TF Classifier Here
             if(mTFRunModel) {
                 //Run TF Model: SEE ORIGINAL .py SCRIPT TO VERIFY CORRECT INPUTS!
                 float[] outputScores = new float[5];//5 is number of classes/labels
@@ -832,6 +842,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 Log.d(TAG, "TF outputScores: " + Arrays.toString(outputScores));
                 mNumberOfClassifierCalls++;
             } else {
+                Log.e(TAG, "[" + String.valueOf(mNumberOfClassifierCalls + 1) + "] CALLING CLASSIFIER FUNCTION!");
                 if (mSampleRate == 250) {
                     double[] getInstance1 = new double[mSampleRate * 2];
                     double[] getInstance2 = new double[mSampleRate * 2];
@@ -941,8 +952,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             case 3:
                 bytes[0] = (byte) 0x0F;
                 break;
-            case 4:
-                // TODO: 6/27/2017 Disconnect instead of reverse?
+            case 4: // TODO: 6/27/2017 Disconnect instead of reverse?
                 bytes[0] = (byte) 0xFF;
                 break;
             default:
@@ -1025,6 +1035,10 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 //Start the service discovery:
                 gatt.discoverServices();
                 startMonitoringRssiValue();
+                break;
+            case BluetoothProfile.STATE_CONNECTING:
+                break;
+            case BluetoothProfile.STATE_DISCONNECTING:
                 break;
             case BluetoothProfile.STATE_DISCONNECTED:
                 mConnected = false;

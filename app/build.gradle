@@ -63,12 +63,8 @@ android {
                 srcDir 'app/src'
             }
             manifest.srcFile 'src/main/AndroidManifest.xml'
-            resources.srcDirs = ['src']
-            aidl.srcDirs = ['src']
-            renderscript.srcDirs = ['src']
             res.srcDirs = ['src/main/res']
             assets.srcDirs = [project.ext.ASSET_DIR]
-            jniLibs.srcDirs = ['src/main/cpp']
         }
 
         debug.setRoot('build-types/debug')
