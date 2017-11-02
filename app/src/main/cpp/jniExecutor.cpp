@@ -4,9 +4,7 @@
 
 #include "rt_nonfinite.h"
 #include "classifySSVEP.h"
-#include "extractPowerSpectrum2ch.h"
 #include "extractPowerSpectrum.h"
-#include "classifySSVEP_4k.h"
 /*Additional Includes*/
 #include <jni.h>
 #include <android/log.h>
@@ -35,22 +33,6 @@ Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jClass
 
 extern "C" {
 JNIEXPORT jdoubleArray JNICALL
-Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jClassifySSVEP4k(
-        JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2, jdouble threshold) {
-    jdouble *X1 = env->GetDoubleArrayElements(ch1, NULL);
-    jdouble *X2 = env->GetDoubleArrayElements(ch2, NULL);
-    double Y[2]; // First two values = Y; last 499 = cPSD
-    if (X1 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
-    if (X2 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
-    jdoubleArray m_result = env->NewDoubleArray(2);
-    classifySSVEP_4k(X1, X2, threshold, &Y[0]);
-    env->SetDoubleArrayRegion(m_result, 0, 2, Y);
-    return m_result;
-}
-}
-
-extern "C" {
-JNIEXPORT jdoubleArray JNICALL
 Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jPSDExtraction(
         JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2, jint sampleRate, jint length) {
     jdouble *X1 = env->GetDoubleArrayElements(ch1, NULL); if (X1 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
@@ -60,10 +42,10 @@ Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jPSDEx
         return nullptr;
     } else {
         jdoubleArray m_result = env->NewDoubleArray(length);
-        double Y[length/2*2]; //Divide by two for normal length, but we are looking at 2 vectors.
+        double Y[length]; //length/2*2=Divide by two for normal length, but we are looking at 2 vectors.
         int PSD_size[2];
         extractPowerSpectrum(X1, &length, X2, &length, sampleRate, &Y[0], PSD_size);
-        env->SetDoubleArrayRegion(m_result, 0, sampleRate*2, Y);
+        env->SetDoubleArrayRegion(m_result, 0, length, Y);
         return m_result;
     }
 }
@@ -95,9 +77,7 @@ Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jmainI
         JNIEnv *env, jobject obj, jboolean terminate) {
     if (!(bool) terminate) {
         classifySSVEP_initialize();
-        extractPowerSpectrum2ch_initialize();
         extractPowerSpectrum_initialize();
-        classifySSVEP_4k_initialize();
         return 0;
     } else {
         return -1;

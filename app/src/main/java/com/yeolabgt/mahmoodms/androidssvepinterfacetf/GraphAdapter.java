@@ -40,13 +40,6 @@ class GraphAdapter {
         this.lineAndPointFormatter.getLinePaint().setStrokeWidth(width);
     }
 
-//    private void addToBuffer(double a) {
-//        if(this.classificationBuffer!=null && this.bufferSize>0) {
-//            System.arraycopy(this.classificationBuffer, 1, this.classificationBuffer, 0, this.bufferSize-1); //shift backwards
-//            this.classificationBuffer[this.bufferSize-1] = a; //add to front:
-//        }
-//    }
-
     void setSeriesHistoryDataPoints(int seriesHistoryDataPoints) {
         this.seriesHistoryDataPoints = seriesHistoryDataPoints;
     }
@@ -59,7 +52,7 @@ class GraphAdapter {
         }
     }
 
-    void addDataPoint(double data, int index) {
+    void addDataPointTimeDomain(double data, int index) {
         if(this.plotData) plot((double)index*xAxisIncrement,data);
     }
 
@@ -87,9 +80,6 @@ class GraphAdapter {
         while (series.size()>seriesHistoryDataPoints-1) {
             series.removeFirst();
         }
-//        if(series.size()>seriesHistoryDataPoints-1) {
-//            series.removeFirst();
-//        }
         series.addLast(x,y);
     }
 }

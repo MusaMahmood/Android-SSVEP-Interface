@@ -381,11 +381,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         double b[] = new double[1000];
         Arrays.fill(b, 0.0);
         jClassifySSVEP(a, b, 2.28300);
-        double aa[] = new double[8000];
-        Arrays.fill(aa, 0.0);
-        double bb[] = new double[8000];
-        Arrays.fill(bb, 0.0);
-        jClassifySSVEP4k(aa, bb, 2.278);
         if (redrawer != null) {
             redrawer.start();
         }
@@ -743,7 +738,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     void addToGraphBuffer(DataChannel dataChannel, GraphAdapter graphAdapter, boolean updateTrainingRoutine) {
         if (byteResolution == 3) {
             for (int i = 0; i < dataChannel.dataBuffer.length / 3; i += graphAdapter.sampleRate / 250) {
-                graphAdapter.addDataPoint(DataChannel.bytesToDouble(dataChannel.dataBuffer[3 * i],
+                graphAdapter.addDataPointTimeDomain(DataChannel.bytesToDouble(dataChannel.dataBuffer[3 * i],
                         dataChannel.dataBuffer[3 * i + 1], dataChannel.dataBuffer[3 * i + 2]),
                         dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 3 + i);
                 if (updateTrainingRoutine) {
@@ -754,7 +749,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             }
         } else if (byteResolution == 2) {
             for (int i = 0; i < dataChannel.dataBuffer.length / 2; i += graphAdapter.sampleRate / 250) {
-                graphAdapter.addDataPoint(DataChannel.bytesToDouble(dataChannel.dataBuffer[2 * i],
+                graphAdapter.addDataPointTimeDomain(DataChannel.bytesToDouble(dataChannel.dataBuffer[2 * i],
                         dataChannel.dataBuffer[2 * i + 1]),
                         dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 2 + i);
                 if (updateTrainingRoutine) {
@@ -801,24 +796,14 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     }
 
     private static void powerSpectrumUpdateUI() {
-//        if (mPSDDataPointsToShow == 0) {
             mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex;
             mGraphAdapterCh1PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
             mGraphAdapterCh2PSDA.setSeriesHistoryDataPoints(mPSDDataPointsToShow);
-            if (mPSDDataPointsToShow > 64)
-                mFreqDomainPlotAdapter.setXyPlotDomainIncrement(6.0);
+            if (mPSDDataPointsToShow > 64) mFreqDomainPlotAdapter.setXyPlotDomainIncrement(6.0);
             else mFreqDomainPlotAdapter.setXyPlotDomainIncrement(2.0);
-//        }
         mGraphAdapterCh1PSDA.addDataPointsGeneric(fPSD, PSDCh1, fPSDStartIndex, fPSDEndIndex);
         mGraphAdapterCh2PSDA.addDataPointsGeneric(fPSD, PSDCh2, fPSDStartIndex, fPSDEndIndex);
     }
-
-    private Runnable mRunPowerSpectumAnalysis = new Runnable() {
-        @Override
-        public void run() {
-            runPowerSpectrum();
-        }
-    };
 
     private Runnable mClassifyTaskRunnableThread = new Runnable() {
         @Override
@@ -853,13 +838,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                     System.arraycopy(mCh1.classificationBuffer, mSampleRate * 2, getInstance1, 0, mSampleRate * 2); //8000→end
                     System.arraycopy(mCh2.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2);
                     Y = jClassifySSVEP(getInstance1, getInstance2, 1.5); // Size of 501, where first two are
-                } else if (mSampleRate == 4000) {
-                    //require last 8k pts:
-                    double[] getInstance1 = new double[mSampleRate * 2];
-                    double[] getInstance2 = new double[mSampleRate * 2];
-                    System.arraycopy(mCh1.classificationBuffer, mSampleRate * 2, getInstance1, 0, mSampleRate * 2); //8000→end
-                    System.arraycopy(mCh2.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2);
-                    Y = jClassifySSVEP4k(getInstance1, getInstance2, 1.5);
                 } else {
                     Y = new double[]{-1.0, -1.0}; //ERROR
                 }
@@ -1202,8 +1180,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     public static native int jmainInitialization(boolean b);
 
     public static native double[] jClassifySSVEP(double[] a, double[] b, double c);
-
-    public static native double[] jClassifySSVEP4k(double[] a, double[] b, double c);
 
     public static native double[] jPSDExtraction(double[] a, double[] b, int sampleRate, int len);
 
