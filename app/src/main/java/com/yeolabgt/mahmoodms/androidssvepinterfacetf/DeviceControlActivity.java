@@ -190,18 +190,17 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         mLButton = findViewById(R.id.buttonL);
         mRButton = findViewById(R.id.buttonR);
         Button resetButton = findViewById(R.id.resetActivityButton);
-        Switch mTensorflowSwitch = findViewById(R.id.tensorflowClassificationSwitch);
+        final Switch mTensorflowSwitch = findViewById(R.id.tensorflowClassificationSwitch);
         changeUIElementVisibility(false);
         mLastTime = System.currentTimeMillis();
         mSSVEPClassTextView = findViewById(R.id.eegClassTextView);
         // Initialize Tensorflow Inference Interface
-//        String customModelPath = Environment.getExternalStorageDirectory().getAbsolutePath()+"/assets/opt_ssvep_net.pb";
-        String customModelPath = Environment.getExternalStorageDirectory().getAbsolutePath()+"/Download/tensorflow_assets/opt_ssvep_net.pb";
-        File customModel = new File(customModelPath);
+        final String customModelPath = Environment.getExternalStorageDirectory().getAbsolutePath()+
+                "/Download/tensorflow_assets/opt_ssvep_net.pb";
+        final File customModel = new File(customModelPath);
+        final File embeddedModel = new File(MODEL_FILENAME);
         Log.d(TAG, "onCreate: customModel.exists: "+String.valueOf(customModel.exists()));
-//        mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), customModelPath);
-        if(customModel.exists()) mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), customModelPath);
-        else mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILENAME);
+
         mOutputScoresNames = new String[] { OUTPUT_DATA_FEED };
 
         //UI Listeners
@@ -233,9 +232,21 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         mTensorflowSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                mTFRunModel = b;
+                if(customModel.exists() && b) {
+                    mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), customModelPath);
+                    mNumberOfClassifierCalls = 1;
+                    mTFRunModel = true;
+                } else if (embeddedModel.exists()) {
+                    //Check if there's a model included:
+                    mTFInferenceInterface = new TensorFlowInferenceInterface(getAssets(), MODEL_FILENAME);
+                    mTFRunModel = true;
+                } else {
+                    // No model found, continuing with original (reset switch)
+                    compoundButton.setChecked(false);
+                    mTFRunModel = false;
+                    Toast.makeText(getApplicationContext(), "No TF Model Found!", Toast.LENGTH_LONG).show();
+                }
                 //Reset counter:
-                mNumberOfClassifierCalls = 1;
             }
         });
         resetButton.setOnClickListener(new View.OnClickListener() {
@@ -271,20 +282,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         mExportButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try {
-                    terminateDataFileWriter();
-                } catch (IOException e) {
-                    Log.e(TAG, "IOException in saveDataFile");
-                    e.printStackTrace();
-                }
-                Context context = getApplicationContext();
-                Uri uii = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
-                Intent exportData = new Intent(Intent.ACTION_SEND);
-                exportData.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                exportData.putExtra(Intent.EXTRA_SUBJECT, "Sensor Data Export Details");
-                exportData.putExtra(Intent.EXTRA_STREAM, uii);
-                exportData.setType("text/html");
-                startActivity(exportData);
+
             }
         });
     }
@@ -295,6 +293,23 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
 
     public String getTimeStamp() {
         return new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss", Locale.US).format(new Date());
+    }
+
+    private void exportData() {
+        try {
+            terminateDataFileWriter();
+        } catch (IOException e) {
+            Log.e(TAG, "IOException in saveDataFile");
+            e.printStackTrace();
+        }
+        Context context = getApplicationContext();
+        Uri uii = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
+        Intent exportData = new Intent(Intent.ACTION_SEND);
+        exportData.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        exportData.putExtra(Intent.EXTRA_SUBJECT, "Sensor Data Export Details");
+        exportData.putExtra(Intent.EXTRA_STREAM, uii);
+        exportData.setType("text/html");
+        startActivity(exportData);
     }
 
     /**
