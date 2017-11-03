@@ -3,6 +3,10 @@
 
     <PreferenceCategory android:title="UI Elements">
         <SwitchPreference
+            android:defaultValue="false"
+            android:key="filterData"
+            android:title="Filter Data?" />
+        <SwitchPreference
             android:defaultValue="true"
             android:key="switch_ch"
             android:title="Ch2/Ch1" />
@@ -10,15 +14,15 @@
             android:defaultValue="true"
             android:key="psda"
             android:title="Show PSDA Plot" />
-        <CheckBoxPreference
-            android:defaultValue="false"
-            android:key="psda_long"
-            android:summary="Freq. Range"
-            android:title="Large PSD Range" />
         <SwitchPreference
             android:defaultValue="false"
             android:key="showUIElements"
             android:title="Show Control Buttons" />
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="psda_long"
+            android:summary="Freq. Range"
+            android:title="Full PSD Range" />
     </PreferenceCategory>
     <PreferenceCategory android:title="Data Saving">
 

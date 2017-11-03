@@ -5,6 +5,8 @@
 #include "rt_nonfinite.h"
 #include "classifySSVEP.h"
 #include "extractPowerSpectrum.h"
+#include "ssvep_filter_f32.h"
+
 /*Additional Includes*/
 #include <jni.h>
 #include <android/log.h>
@@ -13,6 +15,19 @@
 #define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 // Function Definitions
+extern "C" {
+JNIEXPORT jfloatArray JNICALL
+Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jSSVEPCfilter(
+        JNIEnv *env, jobject jobject1, jdoubleArray data) {
+    jdouble *X1 = env->GetDoubleArrayElements(data, NULL);
+    float Y[1000]; // First two values = Y; last 499 = cPSD
+    if (X1 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
+    jfloatArray m_result = env->NewFloatArray(1000);
+    ssvep_filter_f32(X1, Y);
+    env->SetFloatArrayRegion(m_result, 0, 1000, Y);
+    return m_result;
+}
+}
 
 extern "C" {
 JNIEXPORT jdoubleArray JNICALL

@@ -67,7 +67,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     static private GraphAdapter mGraphAdapterCh2PSDA;
     public XYPlotAdapter mTimeDomainPlotAdapter;
     static public XYPlotAdapter mFreqDomainPlotAdapter;
-    public static Redrawer redrawer;
+    public static Redrawer mRedrawer;
     // Power Spectrum Graph Data:
     private static double[] fPSD;
     private static double[] mPSDCh1;
@@ -82,7 +82,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private String mDeviceAddress;
     private boolean mConnected;
     private static int mSampleRate = 250;
-    private int byteResolution = 3;
+//    private int byteResolution = 3;
     boolean mMSBFirst = false;
     //Connecting to Multiple Devices
     private String[] deviceMacAddresses = null;
@@ -93,6 +93,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     //Data Channel Classes
     static DataChannel mCh1;
     static DataChannel mCh2;
+    static boolean mFilterData = false;
     // Classification
     private int mNumber2ChPackets = -1;
     private static int mPacketBuffer = 6;
@@ -211,6 +212,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 mWheelchairControl = b;
                 executeWheelchairCommand(0);
                 changeUIElementVisibility(b);
+                mFilterData = b;
             }
         });
         mChannelSelect = findViewById(R.id.toggleButtonCh1);
@@ -317,9 +319,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         startActivity(exportData);
     }
 
-    /**
-     * @throws IOException some IO Error
-     */
     public void terminateDataFileWriter() throws IOException {
         mPrimarySaveDataFile.terminateDataFileWriter();
     }
@@ -332,15 +331,15 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         double b[] = new double[1000];
         Arrays.fill(b, 0.0);
         jClassifySSVEP(a, b, 2.28300);
-        if (redrawer != null) {
-            redrawer.start();
+        if (mRedrawer != null) {
+            mRedrawer.start();
         }
         super.onResume();
     }
 
     @Override
     protected void onPause() {
-        if (redrawer != null) redrawer.pause();
+        if (mRedrawer != null) mRedrawer.pause();
         changeUIElementVisibility(false);
         super.onPause();
     }
@@ -380,23 +379,18 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("8k".toLowerCase())) {
                 mSampleRate = 8000;
                 mPacketBuffer = 32;
-                byteResolution = 2; //FOR ECG ONLY
             } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("4k".toLowerCase())) {
                 mSampleRate = 4000;
                 mPacketBuffer = 16;
-                byteResolution = 3;
             } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("2k".toLowerCase())) {
                 mSampleRate = 2000;
                 mPacketBuffer = 8;
-                byteResolution = 3;
             } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("1k".toLowerCase())) {
                 mSampleRate = 1000;
                 mPacketBuffer = 4;
-                byteResolution = 3;
             } else if (mBluetoothDeviceArray[i].getName().toLowerCase().contains("500".toLowerCase())) {
                 mSampleRate = 500;
                 mPacketBuffer = 2;
-                byteResolution = 3;
             } else {
                 mSampleRate = 250;
                 mPacketBuffer = 2;
@@ -415,7 +409,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             Log.e(TAG, "fileTimeStamp: "+fileNameTimeStamped);
             try {
                 mPrimarySaveDataFile = new SaveDataFile("/EEGData", fileNameTimeStamped,
-                        byteResolution, (double)1/mSampleRate);
+                        24, (double)1/mSampleRate);
             } catch (IOException e) {
                 Log.e(TAG, "initializeBluetoothArray: IOException", e);
             }
@@ -444,9 +438,9 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         mFreqDomainPlotAdapter.xyPlot.addSeries(mGraphAdapterCh1PSDA.series, mGraphAdapterCh1PSDA.lineAndPointFormatter);
         mFreqDomainPlotAdapter.xyPlot.addSeries(mGraphAdapterCh2PSDA.series, mGraphAdapterCh2PSDA.lineAndPointFormatter);
 
-        redrawer = new Redrawer(
+        mRedrawer = new Redrawer(
                 Arrays.asList(new Plot[]{mTimeDomainPlotAdapter.xyPlot, mFreqDomainPlotAdapter.xyPlot}), 60, false);
-        redrawer.start();
+        mRedrawer.start();
         mGraphInitializedBoolean = true;
     }
 
@@ -460,7 +454,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
 
     @Override
     protected void onDestroy() {
-        redrawer.finish();
+        mRedrawer.finish();
         disconnectAllBLE();
         try {
             terminateDataFileWriter();
@@ -557,6 +551,11 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             mPrimarySaveDataFile.setSaveTimestamps(saveTimestamps);
             mPrimarySaveDataFile.setFpPrecision(precision);
             mPrimarySaveDataFile.setIncludeClass(saveClass);
+            boolean filterData = PreferencesFragment.setFilterData(this);
+            //TODO: for now just ch1:
+            if(mGraphAdapterCh1!=null) {
+                mFilterData = filterData;
+            }
 
             mGraphAdapterCh1PSDA.setPlotData(showPSDA);
             mGraphAdapterCh2PSDA.setPlotData(showPSDA);
@@ -634,17 +633,11 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (visible) {
-                    mSButton.setVisibility(View.VISIBLE);
-                    mFButton.setVisibility(View.VISIBLE);
-                    mLButton.setVisibility(View.VISIBLE);
-                    mRButton.setVisibility(View.VISIBLE);
-                } else {
-                    mSButton.setVisibility(View.INVISIBLE);
-                    mFButton.setVisibility(View.INVISIBLE);
-                    mLButton.setVisibility(View.INVISIBLE);
-                    mRButton.setVisibility(View.INVISIBLE);
-                }
+                int viewVisibility = (visible) ? View.VISIBLE : View.INVISIBLE;
+                mSButton.setVisibility(viewVisibility);
+                mFButton.setVisibility(viewVisibility);
+                mLButton.setVisibility(viewVisibility);
+                mRButton.setVisibility(viewVisibility);
             }
         });
     }
@@ -730,29 +723,42 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     }
 
     void addToGraphBuffer(DataChannel dataChannel, GraphAdapter graphAdapter, boolean updateTrainingRoutine) {
-        if (byteResolution == 3) {
-            for (int i = 0; i < dataChannel.dataBuffer.length / 3; i += graphAdapter.sampleRate / 250) {
-                graphAdapter.addDataPointTimeDomain(DataChannel.bytesToDouble(dataChannel.dataBuffer[3 * i],
-                        dataChannel.dataBuffer[3 * i + 1], dataChannel.dataBuffer[3 * i + 2]),
-                        dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 3 + i);
-                if (updateTrainingRoutine) {
-                    for (int j = 0; j < graphAdapter.sampleRate / 250; j++) {
-                        updateTrainingRoutine(dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 3 + i + j);
+        if(mFilterData && dataChannel.totalDataPointsReceived>1000) {
+            mRedrawer.pause();
+            float[] filteredData = jSSVEPCfilter(dataChannel.classificationBuffer);
+            graphAdapter.clearPlot();
+            for (int i = 0; i < filteredData.length; i++) { // gA.addDataPointTimeDomain(y,x)
+                graphAdapter.addDataPointTimeDomain(filteredData[i],
+                        dataChannel.totalDataPointsReceived
+                                - 999 + i);
+            }
+            mRedrawer.start();
+        } else {
+            if (mPrimarySaveDataFile.getmResolutionBits() == 24) {
+                for (int i = 0; i < dataChannel.dataBuffer.length / 3; i += graphAdapter.sampleRate / 250) {
+                    graphAdapter.addDataPointTimeDomain(DataChannel.bytesToDouble(dataChannel.dataBuffer[3 * i],
+                            dataChannel.dataBuffer[3 * i + 1], dataChannel.dataBuffer[3 * i + 2]),
+                            dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 3 + i);
+                    if (updateTrainingRoutine) {
+                        for (int j = 0; j < graphAdapter.sampleRate / 250; j++) {
+                            updateTrainingRoutine(dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 3 + i + j);
+                        }
                     }
                 }
-            }
-        } else if (byteResolution == 2) {
-            for (int i = 0; i < dataChannel.dataBuffer.length / 2; i += graphAdapter.sampleRate / 250) {
-                graphAdapter.addDataPointTimeDomain(DataChannel.bytesToDouble(dataChannel.dataBuffer[2 * i],
-                        dataChannel.dataBuffer[2 * i + 1]),
-                        dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 2 + i);
-                if (updateTrainingRoutine) {
-                    for (int j = 0; j < graphAdapter.sampleRate / 250; j++) {
-                        updateTrainingRoutine(dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 2 + i + j);
+            } else if (mPrimarySaveDataFile.getmResolutionBits() == 16) {
+                for (int i = 0; i < dataChannel.dataBuffer.length / 2; i += graphAdapter.sampleRate / 250) {
+                    graphAdapter.addDataPointTimeDomain(DataChannel.bytesToDouble(dataChannel.dataBuffer[2 * i],
+                            dataChannel.dataBuffer[2 * i + 1]),
+                            dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 2 + i);
+                    if (updateTrainingRoutine) {
+                        for (int j = 0; j < graphAdapter.sampleRate / 250; j++) {
+                            updateTrainingRoutine(dataChannel.totalDataPointsReceived - dataChannel.dataBuffer.length / 2 + i + j);
+                        }
                     }
                 }
             }
         }
+
         dataChannel.dataBuffer = null;
         dataChannel.packetCounter = 0;
     }
@@ -1151,6 +1157,8 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     static {
         System.loadLibrary("ssvep-lib");
     }
+
+    public static native float[] jSSVEPCfilter(double[] data);
 
     public static native int jmainInitialization(boolean b);
 

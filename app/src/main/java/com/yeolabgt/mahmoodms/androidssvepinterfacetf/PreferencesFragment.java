@@ -20,6 +20,7 @@ public class PreferencesFragment extends PreferenceFragment {
     public static String SETTINGS_SAVE_TIMESTAMPS = "timestamps";
     public static String SETTINGS_SAVE_CLASS = "save_class";
     public static String SETTINGS_BIT_PRECISION = "bit_precision";
+    public static String SETTINGS_FILTER_DATA = "filterData";
 
     public static boolean channelSelect(Context context) {
         return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(SETTINGS_CH_SELECT, true);
@@ -47,6 +48,10 @@ public class PreferencesFragment extends PreferenceFragment {
 
     public static boolean setBitPrecision(Context context) {
         return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(SETTINGS_BIT_PRECISION, true);
+    }
+
+    public static boolean setFilterData(Context context) {
+        return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(SETTINGS_FILTER_DATA, false);
     }
 
     @Override
