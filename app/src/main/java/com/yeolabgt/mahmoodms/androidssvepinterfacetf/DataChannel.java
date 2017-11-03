@@ -62,6 +62,16 @@ class DataChannel {
         }
     }
 
+    static float bytesToFloat32(byte a1, byte a2, byte a3) {
+        int unsigned = unsignedBytesToInt(a1, a2, a3, MSBFirst);
+        return ((float) unsignedToSigned24bit(unsigned) / (float) 8388607.0) * (float)2.25;
+    }
+
+    static float bytesToFloat32(byte a1, byte a2) {
+        int unsigned = unsignedBytesToInt(a1, a2, MSBFirst);
+        return ((float) unsignedToSigned16bit(unsigned) / (float) 32767.0) * (float) 2.25;
+    }
+
     static double bytesToDouble(byte a1, byte a2) {
         int unsigned = unsignedBytesToInt(a1, a2, MSBFirst);
         return ((double) unsignedToSigned16bit(unsigned) / 32767.0) * 2.25;

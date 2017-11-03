@@ -39,12 +39,10 @@ import com.androidplot.Plot;
 import com.androidplot.util.Redrawer;
 import com.beele.BluetoothLe;
 import com.google.common.primitives.Floats;
-import com.opencsv.CSVWriter;
 
 import org.tensorflow.contrib.android.TensorFlowInferenceInterface;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -122,16 +120,14 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     //Data Variables:
     private int batteryWarning = 20;//
     private double dataRate;
-    private double mSSVEPClass = 0;
+    static double mSSVEPClass = 0;
     private double mStimulusDelaySeconds = 0;
     //Classification
     private boolean mWheelchairControl = false; //Default classifier.
     //Play Sound:
     MediaPlayer mMediaBeep;
-    //File Save Stuff:
-    private boolean fileSaveInitialized = false;
-    private CSVWriter csvWriter;
-    private File file;
+    //Save Data File [NEW!]
+    private static SaveDataFile mPrimarySaveDataFile;
     //Tensorflow:
     private boolean mTFRunModel = false;
     private TensorFlowInferenceInterface mTFInferenceInterface;
@@ -312,7 +308,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             e.printStackTrace();
         }
         Context context = getApplicationContext();
-        Uri uii = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
+        Uri uii = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", mPrimarySaveDataFile.file);
         Intent exportData = new Intent(Intent.ACTION_SEND);
         exportData.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         exportData.putExtra(Intent.EXTRA_SUBJECT, "Sensor Data Export Details");
@@ -325,38 +321,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
      * @throws IOException some IO Error
      */
     public void terminateDataFileWriter() throws IOException {
-        if (fileSaveInitialized) {
-            csvWriter.flush();
-            csvWriter.close();
-            fileSaveInitialized = false;
-        }
-    }
-
-    /**
-     * Initializes CSVWriter For Saving Data.
-     *
-     * @throws IOException bc
-     */
-    public void saveDataFile() throws IOException {
-        File root = Environment.getExternalStorageDirectory();
-        String fileTimeStamp = "EEG_SSVEPData_" + getTimeStamp() + "_" + String.valueOf(mSampleRate) + "Hz";
-        Log.e(TAG, "fileTimeStamp: " + fileTimeStamp);
-        if (root.canWrite()) {
-            File dir = new File(root.getAbsolutePath() + "/EEGData");
-            boolean resultMkdir = dir.mkdirs();
-            if (!resultMkdir) {
-                Log.e(TAG, "MKDIRS FAILED");
-            }
-            file = new File(dir, fileTimeStamp + ".csv");
-            if (file.exists() && !file.isDirectory()) {
-                Log.d(TAG, "File " + file.toString() + " already exists - appending data");
-                FileWriter fileWriter = new FileWriter(file, true);
-                csvWriter = new CSVWriter(fileWriter);
-            } else {
-                csvWriter = new CSVWriter(new FileWriter(file));
-            }
-            fileSaveInitialized = true;
-        }
+        mPrimarySaveDataFile.terminateDataFileWriter();
     }
 
     @Override
@@ -446,13 +411,13 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
 
             mGraphAdapterCh1.setSeriesHistoryDataPoints(250 * 5);
             mGraphAdapterCh2.setSeriesHistoryDataPoints(250 * 5);
-
-            if (!fileSaveInitialized) {
-                try {
-                    saveDataFile();
-                } catch (IOException ex) {
-                    Log.e("IOEXCEPTION:", ex.toString());
-                }
+            String fileNameTimeStamped = "EEG_SSVEPData_" +getTimeStamp()+"_"+String.valueOf(mSampleRate)+"Hz";
+            Log.e(TAG, "fileTimeStamp: "+fileNameTimeStamped);
+            try {
+                mPrimarySaveDataFile = new SaveDataFile("/EEGData", fileNameTimeStamped,
+                        byteResolution, (double)1/mSampleRate);
+            } catch (IOException e) {
+                Log.e(TAG, "initializeBluetoothArray: IOException", e);
             }
         }
         mBleInitializedBoolean = true;
@@ -580,10 +545,19 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == 1) {
+            //UI Stuff:
             boolean chSel = PreferencesFragment.channelSelect(this);
             boolean longPSDA = PreferencesFragment.psdaWideRange(this);
             boolean showPSDA = PreferencesFragment.showPSDA(this);
             boolean showUIElements = PreferencesFragment.showUIElements(this);
+            //File Save Stuff
+            boolean saveTimestamps = PreferencesFragment.saveTimestamps(this);
+            short precision = (short) ((PreferencesFragment.setBitPrecision(this)) ? 64 : 32);
+            boolean saveClass = PreferencesFragment.saveClass(this);
+            mPrimarySaveDataFile.setSaveTimestamps(saveTimestamps);
+            mPrimarySaveDataFile.setFpPrecision(precision);
+            mPrimarySaveDataFile.setIncludeClass(saveClass);
+
             mGraphAdapterCh1PSDA.setPlotData(showPSDA);
             mGraphAdapterCh2PSDA.setPlotData(showPSDA);
             mChannelSelect.setChecked(chSel);
@@ -735,23 +709,15 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             mCh1.chEnabled = false;
             mCh2.chEnabled = false;
             if (mCh1.characteristicDataPacketBytes != null && mCh2.characteristicDataPacketBytes != null) {
-//                writeToDisk24(mCh1.characteristicDataPacketBytes, mCh2.characteristicDataPacketBytes);
-//                byte[][] b = new byte[2][];
-//                b[1] = mCh1.characteristicDataPacketBytes;
-//                b[2] = mCh2.characteristicDataPacketBytes;
-//                writeToDisk(byteResolution, b);
-                writeToDisk(byteResolution, mCh1.characteristicDataPacketBytes, mCh2.characteristicDataPacketBytes);
+                mPrimarySaveDataFile.writeToDisk(mCh1.characteristicDataPacketBytes,
+                        mCh2.characteristicDataPacketBytes);
             }
             if (mNumber2ChPackets % 10 == 0) { //Every x * 20 data points
                 Thread classifyTaskThread = new Thread(mClassifyTaskRunnableThread);
                 classifyTaskThread.start();
             }
-//            if (mNumber2ChPackets % 5 == 0) {
-//                Thread analyseThread = new Thread(mRunPowerSpectumAnalysis);
-//                analyseThread.start();
             PowerSpectrumAsyncTask powerSpectrumAsyncTask = new PowerSpectrumAsyncTask();
             powerSpectrumAsyncTask.executeOnExecutor(THREAD_POOL_EXECUTOR);
-//            }
         }
 
         runOnUiThread(new Runnable() {
@@ -977,79 +943,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         }
         if (mLedWheelchairControlService != null && mWheelchairControl) {
             mBluetoothLe.writeCharacteristic(mBluetoothGattArray[mWheelchairGattIndex], mLedWheelchairControlService.getCharacteristic(AppConstant.CHAR_WHEELCHAIR_CONTROL), bytes);
-        }
-    }
-
-    public void exportFileWithClass(double[]... doubles) throws IOException {
-        int numDp = doubles[0].length;
-        int numChannels = doubles.length;
-        String[][] writeCSVValue = new String[numDp][numChannels+1];
-        for (int dp = 0; dp < numDp; dp++) {
-            for (int ch = 0; ch < numChannels; ch++) {
-                writeCSVValue[dp][ch] = doubles[ch][dp]+"";
-            }
-            writeCSVValue[dp][numChannels] = mSSVEPClass + "";
-            csvWriter.writeNext(writeCSVValue[dp], false);
-        }
-    }
-
-    public void exportFileWithClass(double... doubles) throws IOException {
-        int len = doubles.length;
-        if (fileSaveInitialized) {
-            String[] writeCSVValue = new String[len+1];
-            for (int i = 0; i < len; i++) {
-                writeCSVValue[i] = doubles[i]+"";
-            }
-            writeCSVValue[len] = mSSVEPClass + "";
-            csvWriter.writeNext(writeCSVValue, false);
-        }
-    }
-
-    private void writeToDisk(int byteResolution, byte[]... byteArrays) {
-        int len = byteArrays.length; // Number of channels
-        double[][] doubles;
-        if(byteResolution == 2) doubles = new double[len][byteArrays[0].length/2];
-        else if (byteResolution == 3) doubles = new double[len][byteArrays[0].length/3];
-        else doubles = null;
-        for (int ch = 0; ch < len; ch++) { // each channel
-            if(byteResolution==2) {
-                for (int dp = 0; dp < byteArrays[ch].length/2; dp++) { // each datapoint
-                    doubles[ch][dp] = DataChannel.bytesToDouble(byteArrays[ch][2*dp],
-                            byteArrays[ch][2*dp+1]);
-                }
-            } else if (byteResolution==3) {
-                for (int dp = 0; dp < byteArrays[ch].length/3; dp++) {
-                    doubles[ch][dp] = DataChannel.bytesToDouble(byteArrays[ch][3*dp],
-                            byteArrays[ch][3*dp+1], byteArrays[ch][3*dp+2]);
-                }
-            }
-        }
-        try {
-            exportFileWithClass(doubles);
-        } catch (IOException e) {
-            Log.e("IOException", e.toString());
-        }
-    }
-
-    private void writeToDisk24(byte[] ch1Bytes, byte[] ch2Bytes) {
-        if(byteResolution==3) {
-            for (int i = 0; i < ch1Bytes.length / 3; i++) {
-                try {
-                    exportFileWithClass(DataChannel.bytesToDouble(ch1Bytes[3 * i], ch1Bytes[3 * i + 1], ch1Bytes[3 * i + 2]),
-                            DataChannel.bytesToDouble(ch2Bytes[3 * i], ch2Bytes[3 * i + 1], ch2Bytes[3 * i + 2]));
-                } catch (IOException e) {
-                    Log.e("IOException", e.toString());
-                }
-            }
-        } else if (byteResolution==2) {
-            for (int i = 0; i < ch1Bytes.length / 2; i++) {
-                try {
-                    exportFileWithClass(DataChannel.bytesToDouble(ch1Bytes[2 * i], ch1Bytes[2 * i + 1]),
-                            DataChannel.bytesToDouble(ch2Bytes[2 * i], ch2Bytes[2 * i + 1]));
-                } catch (IOException e) {
-                    Log.e("IOException", e.toString());
-                }
-            }
         }
     }
 

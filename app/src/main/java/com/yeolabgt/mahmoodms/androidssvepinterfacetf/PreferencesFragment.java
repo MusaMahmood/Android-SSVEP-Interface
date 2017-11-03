@@ -17,6 +17,9 @@ public class PreferencesFragment extends PreferenceFragment {
     public static String SETTINGS_SHOW_PSDA = "psda";
     public static String SETTINGS_PSD_RANGE = "psda_long";
     public static String SETTINGS_SHOW_BUTTONS = "showUIElements";
+    public static String SETTINGS_SAVE_TIMESTAMPS = "timestamps";
+    public static String SETTINGS_SAVE_CLASS = "save_class";
+    public static String SETTINGS_BIT_PRECISION = "bit_precision";
 
     public static boolean channelSelect(Context context) {
         return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(SETTINGS_CH_SELECT, true);
@@ -32,6 +35,18 @@ public class PreferencesFragment extends PreferenceFragment {
 
     public static boolean showUIElements(Context context) {
         return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(SETTINGS_SHOW_BUTTONS, false);
+    }
+
+    public static boolean saveTimestamps(Context context) {
+        return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(SETTINGS_SAVE_TIMESTAMPS, false);
+    }
+
+    public static boolean saveClass(Context context) {
+        return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(SETTINGS_SAVE_CLASS, true);
+    }
+
+    public static boolean setBitPrecision(Context context) {
+        return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(SETTINGS_BIT_PRECISION, true);
     }
 
     @Override
