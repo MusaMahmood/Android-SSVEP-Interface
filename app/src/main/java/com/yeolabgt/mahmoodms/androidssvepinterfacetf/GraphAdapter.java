@@ -66,13 +66,13 @@ class GraphAdapter {
     }
 
     //Graph Stuff:
-    private void clearPlot() {
+    void clearPlot() {
         if(this.series!=null) {
-            DeviceControlActivity.redrawer.pause();
+            DeviceControlActivity.mRedrawer.pause();
             while(this.series.size()>0) {
                 this.series.removeFirst();
             }
-            DeviceControlActivity.redrawer.start();
+            DeviceControlActivity.mRedrawer.start();
         }
     }
 

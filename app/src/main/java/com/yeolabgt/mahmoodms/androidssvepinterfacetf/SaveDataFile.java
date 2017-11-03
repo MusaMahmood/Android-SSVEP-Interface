@@ -21,7 +21,7 @@ class SaveDataFile {
     private int mLinesWritten; //for timestamp
     private double mIncrement;
     private short fpPrecision = 64; //float vs double (default)
-    private int mByteResolution;
+    private int mResolutionBits;
     private boolean includeClass = true; //Saves by default, no need to change.
     private boolean saveTimestamps = false;
     private boolean initialized = false;
@@ -44,7 +44,7 @@ class SaveDataFile {
             } else {
                 this.csvWriter = new CSVWriter(new FileWriter(this.file));
             }
-            this.mByteResolution = byteResolution;
+            this.mResolutionBits = byteResolution;
             this.mIncrement = increment;
             this.initialized = true;
         }
@@ -62,6 +62,10 @@ class SaveDataFile {
         this.includeClass = includeClass;
     }
 
+    public int getmResolutionBits() {
+        return mResolutionBits;
+    }
+
     void writeToDisk(byte[]... byteArrays) {
         if(this.fpPrecision==64) {
             writeToDiskDouble(byteArrays);
@@ -73,16 +77,16 @@ class SaveDataFile {
     private void writeToDiskFloat(byte[]... byteArrays) {
         int len = byteArrays.length; // Number of channels
         float[][] floats;
-        if(this.mByteResolution == 2) floats = new float[len][byteArrays[0].length/2];
-        else if (this.mByteResolution == 3) floats = new float[len][byteArrays[0].length/3];
+        if(this.mResolutionBits == 16) floats = new float[len][byteArrays[0].length/2];
+        else if (this.mResolutionBits == 24) floats = new float[len][byteArrays[0].length/3];
         else floats = null;
         for (int ch = 0; ch < len; ch++) { // each channel
-            if(this.mByteResolution==2) {
+            if(this.mResolutionBits == 16) {
                 for (int dp = 0; dp < byteArrays[ch].length/2; dp++) { // each datapoint
                     floats[ch][dp] = DataChannel.bytesToFloat32(byteArrays[ch][2*dp],
                             byteArrays[ch][2*dp+1]);
                 }
-            } else if (this.mByteResolution==3) {
+            } else if (this.mResolutionBits == 24) {
                 for (int dp = 0; dp < byteArrays[ch].length/3; dp++) {
                     floats[ch][dp] = DataChannel.bytesToFloat32(byteArrays[ch][3*dp],
                             byteArrays[ch][3*dp+1], byteArrays[ch][3*dp+2]);
@@ -99,16 +103,16 @@ class SaveDataFile {
     private void writeToDiskDouble(byte[]... byteArrays) {
         int len = byteArrays.length; // Number of channels
         double[][] doubles;
-        if(this.mByteResolution == 2) doubles = new double[len][byteArrays[0].length/2];
-        else if (this.mByteResolution == 3) doubles = new double[len][byteArrays[0].length/3];
+        if(this.mResolutionBits == 16) doubles = new double[len][byteArrays[0].length/2];
+        else if (this.mResolutionBits == 24) doubles = new double[len][byteArrays[0].length/3];
         else doubles = null;
         for (int ch = 0; ch < len; ch++) { // each channel
-            if(this.mByteResolution==2) {
+            if(this.mResolutionBits == 16) {
                 for (int dp = 0; dp < byteArrays[ch].length/2; dp++) { // each datapoint
                     doubles[ch][dp] = DataChannel.bytesToDouble(byteArrays[ch][2*dp],
                             byteArrays[ch][2*dp+1]);
                 }
-            } else if (this.mByteResolution==3) {
+            } else if (this.mResolutionBits == 24) {
                 for (int dp = 0; dp < byteArrays[ch].length/3; dp++) {
                     doubles[ch][dp] = DataChannel.bytesToDouble(byteArrays[ch][3*dp],
                             byteArrays[ch][3*dp+1], byteArrays[ch][3*dp+2]);

@@ -106,15 +106,6 @@ class DataChannel {
             return (unsignedByteToInt(b0) + (unsignedByteToInt(b1) << 8) + (unsignedByteToInt(b2) << 16));
     }
 
-
-//    private static int unsignedBytesToInt(byte b0, byte b1) {
-//        return (unsignedByteToInt(b0) + (unsignedByteToInt(b1) << 8));
-//    }
-
-//    private static int unsignedBytesToInt(byte b0, byte b1, byte b2) {
-//        return (unsignedByteToInt(b0) + (unsignedByteToInt(b1) << 8) + (unsignedByteToInt(b2) << 16));
-//    }
-
     private static int unsignedByteToInt(byte b) {
         return b & 0xFF;
     }
