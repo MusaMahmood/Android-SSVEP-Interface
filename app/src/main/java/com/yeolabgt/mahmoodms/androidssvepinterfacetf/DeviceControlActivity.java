@@ -359,16 +359,6 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         }
     }
 
-    public void exportFileWithClass(double eegData1, double eegData2) throws IOException {
-        if (fileSaveInitialized) {
-            String[] writeCSVValue = new String[3];
-            writeCSVValue[0] = eegData1 + "";
-            writeCSVValue[1] = eegData2 + "";
-            writeCSVValue[2] = mSSVEPClass + "";
-            csvWriter.writeNext(writeCSVValue, false);
-        }
-    }
-
     @Override
     public void onResume() {
         jmainInitialization(false);
@@ -745,7 +735,12 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             mCh1.chEnabled = false;
             mCh2.chEnabled = false;
             if (mCh1.characteristicDataPacketBytes != null && mCh2.characteristicDataPacketBytes != null) {
-                writeToDisk24(mCh1.characteristicDataPacketBytes, mCh2.characteristicDataPacketBytes);
+//                writeToDisk24(mCh1.characteristicDataPacketBytes, mCh2.characteristicDataPacketBytes);
+//                byte[][] b = new byte[2][];
+//                b[1] = mCh1.characteristicDataPacketBytes;
+//                b[2] = mCh2.characteristicDataPacketBytes;
+//                writeToDisk(byteResolution, b);
+                writeToDisk(byteResolution, mCh1.characteristicDataPacketBytes, mCh2.characteristicDataPacketBytes);
             }
             if (mNumber2ChPackets % 10 == 0) { //Every x * 20 data points
                 Thread classifyTaskThread = new Thread(mClassifyTaskRunnableThread);
@@ -982,6 +977,57 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         }
         if (mLedWheelchairControlService != null && mWheelchairControl) {
             mBluetoothLe.writeCharacteristic(mBluetoothGattArray[mWheelchairGattIndex], mLedWheelchairControlService.getCharacteristic(AppConstant.CHAR_WHEELCHAIR_CONTROL), bytes);
+        }
+    }
+
+    public void exportFileWithClass(double[]... doubles) throws IOException {
+        int numDp = doubles[0].length;
+        int numChannels = doubles.length;
+        String[][] writeCSVValue = new String[numDp][numChannels+1];
+        for (int dp = 0; dp < numDp; dp++) {
+            for (int ch = 0; ch < numChannels; ch++) {
+                writeCSVValue[dp][ch] = doubles[ch][dp]+"";
+            }
+            writeCSVValue[dp][numChannels] = mSSVEPClass + "";
+            csvWriter.writeNext(writeCSVValue[dp], false);
+        }
+    }
+
+    public void exportFileWithClass(double... doubles) throws IOException {
+        int len = doubles.length;
+        if (fileSaveInitialized) {
+            String[] writeCSVValue = new String[len+1];
+            for (int i = 0; i < len; i++) {
+                writeCSVValue[i] = doubles[i]+"";
+            }
+            writeCSVValue[len] = mSSVEPClass + "";
+            csvWriter.writeNext(writeCSVValue, false);
+        }
+    }
+
+    private void writeToDisk(int byteResolution, byte[]... byteArrays) {
+        int len = byteArrays.length; // Number of channels
+        double[][] doubles;
+        if(byteResolution == 2) doubles = new double[len][byteArrays[0].length/2];
+        else if (byteResolution == 3) doubles = new double[len][byteArrays[0].length/3];
+        else doubles = null;
+        for (int ch = 0; ch < len; ch++) { // each channel
+            if(byteResolution==2) {
+                for (int dp = 0; dp < byteArrays[ch].length/2; dp++) { // each datapoint
+                    doubles[ch][dp] = DataChannel.bytesToDouble(byteArrays[ch][2*dp],
+                            byteArrays[ch][2*dp+1]);
+                }
+            } else if (byteResolution==3) {
+                for (int dp = 0; dp < byteArrays[ch].length/3; dp++) {
+                    doubles[ch][dp] = DataChannel.bytesToDouble(byteArrays[ch][3*dp],
+                            byteArrays[ch][3*dp+1], byteArrays[ch][3*dp+2]);
+                }
+            }
+        }
+        try {
+            exportFileWithClass(doubles);
+        } catch (IOException e) {
+            Log.e("IOException", e.toString());
         }
     }
 

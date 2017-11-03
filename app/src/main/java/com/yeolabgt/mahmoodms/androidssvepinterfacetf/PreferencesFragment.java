@@ -1,13 +1,10 @@
 package com.yeolabgt.mahmoodms.androidssvepinterfacetf;
 
-import android.app.ActionBar;
 import android.content.Context;
 import android.os.Bundle;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
-import android.support.v4.app.NavUtils;
-import android.view.MenuItem;
 
 /**
  * Created by mmahmood31 on 11/2/2017.
