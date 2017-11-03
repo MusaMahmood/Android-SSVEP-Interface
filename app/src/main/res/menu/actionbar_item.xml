@@ -26,5 +26,10 @@
         android:orderInCategory="704"
         app:showAsAction="never"
         android:title="@string/action_settings"/>
+    <item
+        android:id="@+id/action_export"
+        android:orderInCategory="705"
+        app:showAsAction="never"
+        android:title="@string/action_export"/>
 
 </menu>

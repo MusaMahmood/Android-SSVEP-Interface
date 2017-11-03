@@ -106,11 +106,11 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
     private TextView mDataRate;
     private TextView mSSVEPClassTextView;
     private TextView mYfitTextView;
-    private Button mExportButton;
     private Button mSButton;
     private Button mFButton;
     private Button mLButton;
     private Button mRButton;
+    private ToggleButton mChannelSelect;
     private Menu menu;
     //Data throughput counter
     private long mLastTime;
@@ -176,8 +176,7 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         //Flag to keep screen on (stay-awake):
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         //Set up TextViews
-        mExportButton = findViewById(R.id.button_export);
-//        mDomainSwitch = findViewById(R.id.domainSwitch);
+        Button mExportButton = findViewById(R.id.button_export);
         mBatteryLevel = findViewById(R.id.batteryText);
         mTrainingInstructions = findViewById(R.id.trainingInstructions);
         updateTrainingView(mRunTrainingBool);
@@ -218,27 +217,12 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 changeUIElementVisibility(b);
             }
         });
-        ToggleButton ch1 = findViewById(R.id.toggleButtonCh1);
-        ch1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        mChannelSelect = findViewById(R.id.toggleButtonCh1);
+        mChannelSelect.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 mGraphAdapterCh1.setPlotData(b);
                 mGraphAdapterCh2.setPlotData(!b);
-            }
-        });
-        ToggleButton ch2 = findViewById(R.id.toggleButtonCh2);
-        ch2.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-//                mGraphAdapterCh1PSDA.setPlotData(b);
-//                mGraphAdapterCh2PSDA.setPlotData(b);
-                if(b) {
-                    fPSDStartIndex = 0;
-                    fPSDEndIndex = 249;
-                } else {
-                    fPSDStartIndex = 16;
-                    fPSDEndIndex = 44;
-                }
             }
         });
         mTensorflowSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -594,14 +578,44 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
                 onBackPressed();
                 return true;
             case R.id.action_settings:
-//                launchSettingsMenu();
+                launchSettingsMenu();
+                return true;
+            case R.id.action_export:
+                exportData();
                 return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == 1) {
+            boolean chSel = PreferencesFragment.channelSelect(this);
+            boolean longPSDA = PreferencesFragment.psdaWideRange(this);
+            boolean showPSDA = PreferencesFragment.showPSDA(this);
+            boolean showUIElements = PreferencesFragment.showUIElements(this);
+            mGraphAdapterCh1PSDA.setPlotData(showPSDA);
+            mGraphAdapterCh2PSDA.setPlotData(showPSDA);
+            mChannelSelect.setChecked(chSel);
+            mGraphAdapterCh1.setPlotData(chSel);
+            mGraphAdapterCh2.setPlotData(!chSel);
+            if(longPSDA) {
+                fPSDStartIndex = 0;
+                fPSDEndIndex = 249;
+            } else {
+                fPSDStartIndex = 16;
+                fPSDEndIndex = 44;
+            }
+            mWheelchairControl = showUIElements;
+            executeWheelchairCommand(0);
+            changeUIElementVisibility(showUIElements);
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
     private void launchSettingsMenu() {
-//        Intent intent = new Intent(this, )
+        Intent intent = new Intent(this, SettingsActivity.class);
+        startActivityForResult(intent, 1);
     }
 
     private void connect() {
@@ -657,13 +671,11 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
             @Override
             public void run() {
                 if (visible) {
-                    mExportButton.setVisibility(View.VISIBLE);
                     mSButton.setVisibility(View.VISIBLE);
                     mFButton.setVisibility(View.VISIBLE);
                     mLButton.setVisibility(View.VISIBLE);
                     mRButton.setVisibility(View.VISIBLE);
                 } else {
-                    mExportButton.setVisibility(View.INVISIBLE);
                     mSButton.setVisibility(View.INVISIBLE);
                     mFButton.setVisibility(View.INVISIBLE);
                     mLButton.setVisibility(View.INVISIBLE);
