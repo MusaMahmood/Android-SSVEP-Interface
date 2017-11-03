@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Android SSVEP Interface</string>
     <string name="main_activity_title">Android SSVEP Interface</string>
+    <string name="settings_activity_title">Support Preferences</string>
     <string name="ble_not_supported">BLE is not supported</string>
     <string name="error_bluetooth_not_supported">Bluetooth not supported.</string>
     <string name="menu_connect">Connect</string>
@@ -16,4 +17,5 @@
     <string name="menu_connection_status">-Status-</string>
     <string name="menu_rssi">-RSSI-</string>
     <string name="action_settings">Settings</string>
+    <string name="action_export">Export</string>
 </resources>
