@@ -151,11 +151,11 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         //Receive Intents:
         final Intent intent = getIntent();
-        deviceMacAddresses = intent.getStringArrayExtra(MainActivity.INTENT_DEVICES_KEY);
-        String[] deviceDisplayNames = intent.getStringArrayExtra(MainActivity.INTENT_DEVICES_NAMES);
-        String[] intentStimulusClass = intent.getStringArrayExtra(MainActivity.INTENT_DELAY_VALUE_SECONDS);
+        deviceMacAddresses = intent.getStringArrayExtra(MainActivity.Companion.getINTENT_DEVICES_KEY());
+        String[] deviceDisplayNames = intent.getStringArrayExtra(MainActivity.Companion.getINTENT_DEVICES_NAMES());
+        String[] intentStimulusClass = intent.getStringArrayExtra(MainActivity.Companion.getINTENT_DELAY_VALUE_SECONDS());
         if (intent.getExtras() != null)
-            mRunTrainingBool = intent.getExtras().getBoolean(MainActivity.INTENT_TRAIN_BOOLEAN);
+            mRunTrainingBool = intent.getExtras().getBoolean(MainActivity.Companion.getINTENT_TRAIN_BOOLEAN());
         else Log.e(TAG, "ERROR: intent.getExtras = null");
 
         mStimulusDelaySeconds = Integer.valueOf(intentStimulusClass[0]);
