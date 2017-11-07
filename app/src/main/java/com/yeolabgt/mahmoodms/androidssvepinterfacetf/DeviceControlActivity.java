@@ -724,15 +724,15 @@ public class DeviceControlActivity extends Activity implements BluetoothLe.Bluet
 
     void addToGraphBuffer(DataChannel dataChannel, GraphAdapter graphAdapter, boolean updateTrainingRoutine) {
         if(mFilterData && dataChannel.totalDataPointsReceived>1000) {
-            mRedrawer.pause();
+//            mRedrawer.pause();
             float[] filteredData = jSSVEPCfilter(dataChannel.classificationBuffer);
             graphAdapter.clearPlot();
             for (int i = 0; i < filteredData.length; i++) { // gA.addDataPointTimeDomain(y,x)
-                graphAdapter.addDataPointTimeDomain(filteredData[i],
+                graphAdapter.addDataPointTimeDomainAlt(filteredData[i],
                         dataChannel.totalDataPointsReceived
                                 - 999 + i);
             }
-            mRedrawer.start();
+//            mRedrawer.start();
         } else {
             if (mPrimarySaveDataFile.getmResolutionBits() == 24) {
                 for (int i = 0; i < dataChannel.dataBuffer.length / 3; i += graphAdapter.sampleRate / 250) {

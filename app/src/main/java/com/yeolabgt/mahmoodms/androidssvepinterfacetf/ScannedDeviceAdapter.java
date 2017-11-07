@@ -78,12 +78,6 @@ class ScannedDeviceAdapter extends ArrayAdapter<ScannedDevice> {
         }
     }
 
-    public void add(ScannedDevice scannedDevice) {
-        if(!list.contains(scannedDevice)) {
-            list.add(scannedDevice);
-        }
-    }
-
     void remove(int index) {
         list.remove(index);
     }

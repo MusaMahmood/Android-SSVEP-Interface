@@ -52,6 +52,10 @@ class GraphAdapter {
         }
     }
 
+    void addDataPointTimeDomainAlt(double data, int index) {
+        if(this.plotData) plot((double)index*xAxisIncrement,data);
+    }
+
     void addDataPointTimeDomain(double data, int index) {
         if(this.plotData) plot((double)index*xAxisIncrement,data);
     }
@@ -68,17 +72,22 @@ class GraphAdapter {
     //Graph Stuff:
     void clearPlot() {
         if(this.series!=null) {
-            DeviceControlActivity.mRedrawer.pause();
             while(this.series.size()>0) {
                 this.series.removeFirst();
             }
-            DeviceControlActivity.mRedrawer.start();
         }
     }
 
     private void plot(double x, double y) {
         while (series.size()>seriesHistoryDataPoints-1) {
             series.removeFirst();
+        }
+        series.addLast(x,y);
+    }
+
+    private void plotAlt(double x, double y) {
+        while (series.size()>seriesHistoryDataPoints-1) {
+            series.removeLast();
         }
         series.addLast(x,y);
     }
