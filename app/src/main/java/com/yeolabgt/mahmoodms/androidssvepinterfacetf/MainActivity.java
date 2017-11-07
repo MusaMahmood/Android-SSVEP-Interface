@@ -56,6 +56,12 @@ public class MainActivity extends Activity {
     public final static String INTENT_DEVICES_KEY = "DEVICES_TO_PARSE";
     public final static String INTENT_DEVICES_NAMES = "DEVICE_NAMES_TO_PARSE";
     public final static String INTENT_DELAY_VALUE_SECONDS = "DELAY_VALUE_SECONDS";
+    public final static String[] PERMISSIONS_LIST = {
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.READ_PHONE_STATE
+    };
 
     EditText mEditDelayText;
 
@@ -149,22 +155,17 @@ public class MainActivity extends Activity {
     }
 
     public boolean checkPermissions() {
-        int permissionCheck1 = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION);
-        int permissionCheck2 = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        int permissionCheck3 = ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS);
-        int permissionCheck4 = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE);
+        int[] permissionCheck = {
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION),
+                ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS),
+                ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+        };
         List<String> listPermissionsNeeded = new ArrayList<>();
-        if (permissionCheck1 != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.ACCESS_COARSE_LOCATION);
-        }
-        if (permissionCheck2 != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        }
-        if (permissionCheck3 != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.SEND_SMS);
-        }
-        if (permissionCheck4 != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.READ_PHONE_STATE);
+        for (int i = 0; i < permissionCheck.length; i++) {
+            if(permissionCheck[i] != PackageManager.PERMISSION_GRANTED) {
+                listPermissionsNeeded.add(PERMISSIONS_LIST[i]);
+            }
         }
         Log.e(TAG, "Permissions List Size: " + String.valueOf(listPermissionsNeeded.size()));
         if (!listPermissionsNeeded.isEmpty()) {
