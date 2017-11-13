@@ -34,7 +34,7 @@ static void filter(double b[7], double a[7], const double x[1036], const double
   int naxpy;
   int j;
   a1 = a[0];
-  if ((!(a[0] == 0.0)) && (a[0] != 1.0)) {
+  if (a[0] != 0 && (a[0] != 1.0)) {
     for (k = 0; k < 7; k++) {
       b[k] /= a1;
     }
@@ -53,7 +53,7 @@ static void filter(double b[7], double a[7], const double x[1036], const double
   memset(&y[6], 0, 1030U * sizeof(double));
   for (k = 0; k < 1036; k++) {
     naxpy = 1036 - k;
-    if (!(naxpy < 7)) {
+    if (naxpy >= 7) {
       naxpy = 7;
     }
 
@@ -62,7 +62,7 @@ static void filter(double b[7], double a[7], const double x[1036], const double
     }
 
     naxpy = 1035 - k;
-    if (!(naxpy < 6)) {
+    if (naxpy >= 6) {
       naxpy = 6;
     }
 
@@ -154,23 +154,6 @@ void ssvep_filter_f32(const double X[1000], float Y[1000])
   for (i = 0; i < 1000; i++) {
     Y[i] = (float)y[i + 18];
   }
-}
-
-//
-// Arguments    : void
-// Return Type  : void
-//
-void ssvep_filter_f32_initialize()
-{
-}
-
-//
-// Arguments    : void
-// Return Type  : void
-//
-void ssvep_filter_f32_terminate()
-{
-  // (no terminate code required)
 }
 
 //

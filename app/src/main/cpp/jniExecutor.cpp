@@ -17,7 +17,7 @@
 // Function Definitions
 extern "C" {
 JNIEXPORT jfloatArray JNICALL
-Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jSSVEPCfilter(
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jSSVEPCfilter(
         JNIEnv *env, jobject jobject1, jdoubleArray data) {
     jdouble *X1 = env->GetDoubleArrayElements(data, NULL);
     float Y[1000]; // First two values = Y; last 499 = cPSD
@@ -31,7 +31,7 @@ Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jSSVEP
 
 extern "C" {
 JNIEXPORT jdoubleArray JNICALL
-Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jClassifySSVEP(
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jClassifySSVEP(
         JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2, jdouble threshold) {
 
     jdouble *X1 = env->GetDoubleArrayElements(ch1, NULL);
@@ -48,7 +48,7 @@ Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jClass
 
 extern "C" {
 JNIEXPORT jdoubleArray JNICALL
-Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jPSDExtraction(
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jPSDExtraction(
         JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2, jint sampleRate, jint length) {
     jdouble *X1 = env->GetDoubleArrayElements(ch1, NULL); if (X1 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
     jdouble *X2 = env->GetDoubleArrayElements(ch2, NULL); if (X2 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
@@ -74,7 +74,7 @@ JNIEXPORT jdoubleArray JNICALL
  * @param jobject1
  * @return array of frequencies (Hz) corresponding to a raw input signal.
  */
-Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jLoadfPSD(
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jLoadfPSD(
         JNIEnv *env, jobject jobject1, jint sampleRate) {
     jdoubleArray m_result = env->NewDoubleArray(sampleRate);
     double fPSD[sampleRate];
@@ -88,7 +88,7 @@ Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jLoadf
 
 extern "C" {
 JNIEXPORT jint JNICALL
-Java_com_yeolabgt_mahmoodms_androidssvepinterfacetf_DeviceControlActivity_jmainInitialization(
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jmainInitialization(
         JNIEnv *env, jobject obj, jboolean terminate) {
     if (!(bool) terminate) {
         classifySSVEP_initialize();
