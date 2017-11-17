@@ -32,7 +32,6 @@ import android.widget.Toast
 import android.widget.ToggleButton
 
 import com.androidplot.util.Redrawer
-//import com.beele.BluetoothLe
 import com.google.common.primitives.Floats
 import com.yeolabgt.mahmoodms.actblelibrary.ActBle
 
@@ -623,7 +622,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         if (status == BluetoothGatt.GATT_SUCCESS) {
             if (AppConstant.CHAR_BATTERY_LEVEL == characteristic.uuid) {
                 if(characteristic.value!=null) {
-//                    val batteryLevel = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0)
                     val batteryLevel = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0)
                     updateBatteryStatus(batteryLevel)
                     Log.i(TAG, "Battery Level :: " + batteryLevel)
@@ -673,6 +671,16 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 }
             }
         }
+
+        if (AppConstant.CHAR_EEG_CH3_SIGNAL == characteristic.uuid) {
+            getDataRateBytes(characteristic.value.size)
+        }
+
+        if (AppConstant.CHAR_EEG_CH4_SIGNAL == characteristic.uuid) {
+            getDataRateBytes(characteristic.value.size)
+        }
+
+
         if (mCh1!!.chEnabled && mCh2!!.chEnabled) {
             mNumber2ChPackets++
             mEEGConnectedAllChannels = true
