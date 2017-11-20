@@ -266,19 +266,16 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         mExportButton.setOnClickListener { exportData() }
         writeNewSettings.setOnClickListener {
             val bytes = byteArrayOf(0x94.toByte(), 0xD0.toByte(), 0xEC.toByte(), 0x00.toByte(),
-                    0x60.toByte(), 0x60.toByte(), 0x60.toByte(), 0x60.toByte(), 0x00.toByte(),
+                    0x60.toByte(), 0x60.toByte(), 0xE1.toByte(), 0xE1.toByte(), 0x00.toByte(),
                     0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x0F.toByte(), 0x0F.toByte(),
                     0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
                     0x0F.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()) //NOTE: I disabled SRB1
             if (mEEGConfigGattService != null) {
                 Log.e(TAG, "SendingCommand (byte): "+bytes.toString())
                 mActBle!!.writeCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), bytes)
+                mActBle!!.readCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG))
             }
         }
-    }
-
-    private fun resetActivity() {
-        recreate()
     }
 
     private fun exportData() {
@@ -600,7 +597,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 if (AppConstant.SERVICE_EEG_SIGNAL == service.uuid) {
                     if (service.getCharacteristic(AppConstant.CHAR_EEG_CONFIG) != null) {
                         mEEGConfigGattService = service
-                        mActBle!!.readCharacteristic(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CONFIG));
+                        mActBle!!.readCharacteristic(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CONFIG))
                     }
 
                     if (service.getCharacteristic(AppConstant.CHAR_EEG_CH1_SIGNAL) != null) {
@@ -645,6 +642,13 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                     val batteryLevel = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0)
                     updateBatteryStatus(batteryLevel)
                     Log.i(TAG, "Battery Level :: " + batteryLevel)
+                }
+            }
+            //TODO: NEED TO CHANGE mSampleRate, DataChannel[], and GraphAdapter[] here.
+            if (AppConstant.CHAR_EEG_CONFIG == characteristic.uuid) {
+                if (characteristic.value != null) {
+                    val readValue = characteristic.value
+                    Log.e(TAG,"EEG CONFIG: "+DataChannel.byteArrayToHexString(readValue))
                 }
             }
         } else {
