@@ -34,6 +34,7 @@ import android.widget.ToggleButton
 import com.androidplot.util.Redrawer
 import com.google.common.primitives.Floats
 import com.yeolabgt.mahmoodms.actblelibrary.ActBle
+import kotlinx.android.synthetic.main.activity_device_control.*
 
 import org.tensorflow.contrib.android.TensorFlowInferenceInterface
 
@@ -64,7 +65,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     //Connecting to Multiple Devices
     private var deviceMacAddresses: Array<String>? = null
     private var mLedWheelchairControlService: BluetoothGattService? = null
+    private var mEEGConfigGattService: BluetoothGattService? = null
     private var mWheelchairGattIndex: Int = 0
+    private var mEEGConfigGattIndex: Int = 0
     private var mEEGConnectedAllChannels = false
     // Classification
     private var mNumber2ChPackets = -1
@@ -193,7 +196,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         mFButton = findViewById(R.id.buttonF)
         mLButton = findViewById(R.id.buttonL)
         mRButton = findViewById(R.id.buttonR)
-        val resetButton = findViewById<Button>(R.id.resetActivityButton)
+//        val resetButton = findViewById<Button>(R.id.resetActivityButton)
         val mTensorflowSwitch = findViewById<Switch>(R.id.tensorflowClassificationSwitch)
         changeUIElementVisibility(false)
         mLastTime = System.currentTimeMillis()
@@ -256,12 +259,22 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 Toast.makeText(applicationContext, "Using PSD Analysis", Toast.LENGTH_SHORT).show()
             }
         }
-        resetButton.setOnClickListener { resetActivity() }
         mSButton!!.setOnClickListener { executeWheelchairCommand(0) }
         mFButton!!.setOnClickListener { executeWheelchairCommand(1) }
         mLButton!!.setOnClickListener { executeWheelchairCommand(3) }
         mRButton!!.setOnClickListener { executeWheelchairCommand(2) }
         mExportButton.setOnClickListener { exportData() }
+        writeNewSettings.setOnClickListener {
+            val bytes = byteArrayOf(0x94.toByte(), 0xD0.toByte(), 0xEC.toByte(), 0x00.toByte(),
+                    0x60.toByte(), 0x60.toByte(), 0x60.toByte(), 0x60.toByte(), 0x00.toByte(),
+                    0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x0F.toByte(), 0x0F.toByte(),
+                    0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                    0x0F.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()) //NOTE: I disabled SRB1
+            if (mEEGConfigGattService != null) {
+                Log.e(TAG, "SendingCommand (byte): "+bytes.toString())
+                mActBle!!.writeCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), bytes)
+            }
+        }
     }
 
     private fun resetActivity() {
@@ -330,6 +343,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 mWheelchairGattIndex = i
                 Log.e(TAG, "mWheelchairGattIndex: " + mWheelchairGattIndex)
                 continue //we are done initializing
+            } else {
+                mEEGConfigGattIndex = i
             }
             if ("EMG 250Hz" == mBluetoothDeviceArray[i]!!.name) {
                 mMSBFirst = false
@@ -583,6 +598,11 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 }
 
                 if (AppConstant.SERVICE_EEG_SIGNAL == service.uuid) {
+                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CONFIG) != null) {
+                        mEEGConfigGattService = service
+                        mActBle!!.readCharacteristic(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CONFIG));
+                    }
+
                     if (service.getCharacteristic(AppConstant.CHAR_EEG_CH1_SIGNAL) != null) {
                         mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH1_SIGNAL), true)
                     }
