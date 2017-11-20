@@ -196,7 +196,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         mFButton = findViewById(R.id.buttonF)
         mLButton = findViewById(R.id.buttonL)
         mRButton = findViewById(R.id.buttonR)
-//        val resetButton = findViewById<Button>(R.id.resetActivityButton)
         val mTensorflowSwitch = findViewById<Switch>(R.id.tensorflowClassificationSwitch)
         changeUIElementVisibility(false)
         mLastTime = System.currentTimeMillis()
@@ -264,16 +263,16 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         mLButton!!.setOnClickListener { executeWheelchairCommand(3) }
         mRButton!!.setOnClickListener { executeWheelchairCommand(2) }
         mExportButton.setOnClickListener { exportData() }
-        writeNewSettings.setOnClickListener {
-            val bytes = byteArrayOf(0x94.toByte(), 0xD0.toByte(), 0xEC.toByte(), 0x00.toByte(),
-                    0x60.toByte(), 0x60.toByte(), 0xE1.toByte(), 0xE1.toByte(), 0x00.toByte(),
+        writeNewSettings.setOnClickListener { //only read 2-ch datas
+            val bytes = byteArrayOf(0x96.toByte(), 0xD0.toByte(), 0xEC.toByte(), 0x00.toByte(),
+                    0x00.toByte(), 0x00.toByte(), 0xE1.toByte(), 0xE1.toByte(), 0x00.toByte(),
                     0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x0F.toByte(), 0x0F.toByte(),
                     0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
                     0x0F.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()) //NOTE: I disabled SRB1
             if (mEEGConfigGattService != null) {
                 Log.e(TAG, "SendingCommand (byte): "+bytes.toString())
                 mActBle!!.writeCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), bytes)
-                mActBle!!.readCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG))
+                //Should notify/update after writing
             }
         }
     }
@@ -598,6 +597,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                     if (service.getCharacteristic(AppConstant.CHAR_EEG_CONFIG) != null) {
                         mEEGConfigGattService = service
                         mActBle!!.readCharacteristic(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CONFIG))
+                        mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), true)
                     }
 
                     if (service.getCharacteristic(AppConstant.CHAR_EEG_CH1_SIGNAL) != null) {
@@ -648,7 +648,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             if (AppConstant.CHAR_EEG_CONFIG == characteristic.uuid) {
                 if (characteristic.value != null) {
                     val readValue = characteristic.value
-                    Log.e(TAG,"EEG CONFIG: "+DataChannel.byteArrayToHexString(readValue))
+                    Log.e(TAG,"onCharacteriticRead: \n" +
+                            "CHAR_EEG_CONFIG: "+DataChannel.byteArrayToHexString(readValue))
                 }
             }
         } else {
@@ -660,6 +661,14 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         if (mCh1 == null || mCh2 == null) {
             mCh1 = DataChannel(false, mMSBFirst, 4 * mSampleRate)
             mCh2 = DataChannel(false, mMSBFirst, 4 * mSampleRate)
+        }
+
+        if (AppConstant.CHAR_EEG_CONFIG == characteristic.uuid) {
+            if (characteristic.value != null) {
+                val readValue = characteristic.value
+                Log.e(TAG,"onCharacteriticChanged: \n" +
+                        "CHAR_EEG_CONFIG: "+DataChannel.byteArrayToHexString(readValue))
+            }
         }
 
         if (AppConstant.CHAR_BATTERY_LEVEL == characteristic.uuid) {

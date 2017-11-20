@@ -54,7 +54,8 @@ internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classifi
     }
 
     companion object {
-        private val HEX_CHARS = "0123456789ABCDEF".toCharArray()
+        private val HEX_CHARS = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                                        'A', 'B', 'C', 'D', 'E', 'F')
 
         fun byteArrayToHexString(byteArray: ByteArray) : String = byteArray.toHex()
 
