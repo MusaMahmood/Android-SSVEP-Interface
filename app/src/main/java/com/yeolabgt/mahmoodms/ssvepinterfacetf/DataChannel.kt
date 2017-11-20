@@ -54,6 +54,24 @@ internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classifi
     }
 
     companion object {
+        private val HEX_CHARS = "0123456789ABCDEF".toCharArray()
+
+        fun byteArrayToHexString(byteArray: ByteArray) : String = byteArray.toHex()
+
+        private fun ByteArray.toHex() : String {
+            val result = StringBuffer()
+
+            forEach {
+                val octet = it.toInt()
+                val firstIndex = (octet and 0xF0).ushr(4)
+                val secondIndex = octet and 0x0F
+                result.append(HEX_CHARS[firstIndex])
+                result.append(HEX_CHARS[secondIndex])
+            }
+
+            return result.toString()
+        }
+
         private var MSBFirst: Boolean = false
 
         fun bytesToFloat32(a1: Byte, a2: Byte, a3: Byte): Float {

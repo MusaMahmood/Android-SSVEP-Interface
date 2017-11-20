@@ -19,6 +19,7 @@ class AppConstant {
         internal val CHAR_EEG_CH2_SIGNAL = UUID.fromString("0000eef2-0000-1000-8000-00805f9b34fb")
         internal val CHAR_EEG_CH3_SIGNAL = UUID.fromString("0000eef3-0000-1000-8000-00805f9b34fb")
         internal val CHAR_EEG_CH4_SIGNAL = UUID.fromString("0000eef4-0000-1000-8000-00805f9b34fb")
+        internal val CHAR_EEG_CONFIG = UUID.fromString("0000eeff-0000-1000-8000-00805f9b34fb")
 
         /** TO READ THE BLE DEVICE'S INFORMATION  */
 
