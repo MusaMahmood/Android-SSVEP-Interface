@@ -745,7 +745,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 graphAdapter.addDataPointTimeDomainAlt(filteredData[i].toDouble(),
                         dataChannel.totalDataPointsReceived - 999 + i)
             }
-
         } else {
             if (dataChannel.dataBuffer != null) {
                 if (mPrimarySaveDataFile!!.resolutionBits == 24) {
@@ -790,44 +789,41 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     private fun updateTrainingRoutine(dataPoints: Int) {
         if (dataPoints % mSampleRate == 0 && mRunTrainingBool) {
             val second = dataPoints / mSampleRate
+            Log.d(TAG, "second: "+second.toString())
             val mSDS = mStimulusDelaySeconds.toInt()
-            var eventSecondCountdown = 0
+            if (second % mSDS == 0) mMediaBeep.start()
             when {
-                (second in 0..mSDS) -> {
-                    eventSecondCountdown = mSDS - second
-                    updateTrainingPrompt("EYES CLOSED")
+                (second < 10) -> {
                     updateTrainingPromptColor(Color.GREEN)
+                    mSSVEPClass = 0.0
+                    updateTrainingPrompt("No stimulus: Null Class!")
                 }
-                (second in mSDS..(2*mSDS)) -> {
-                    eventSecondCountdown = 2 * mSDS - second
-                    updateTrainingPrompt("15.15Hz")
+                (second == 10) -> {
                     mSSVEPClass = 1.0
+                    updateTrainingPrompt("EYES CLOSED")
                 }
-                (second in (2*mSDS)..(3*mSDS)) -> {
-                    eventSecondCountdown = 3 * mSDS - second
-                    updateTrainingPrompt("16.67hz")
+                (second == 20) -> {
                     mSSVEPClass = 2.0
+                    updateTrainingPrompt("15.15Hz")
                 }
-                (second in (3*mSDS)..(4*mSDS)) -> {
-                    eventSecondCountdown = 4 * mSDS - second
-                    updateTrainingPrompt("18.51Hz")
+                (second == 30) -> {
                     mSSVEPClass = 3.0
+                    updateTrainingPrompt("16.67hz")
                 }
-                (second in (4*mSDS)..(5*mSDS)) -> {
-                    eventSecondCountdown = 5 * mSDS - second
-                    updateTrainingPrompt("20.00Hz")
+                (second == 40) -> {
                     mSSVEPClass = 4.0
+                    updateTrainingPrompt("18.51Hz")
                 }
-                (second in (5*mSDS)..(6*mSDS)) -> {
-                    eventSecondCountdown = 6 * mSDS - second
+                (second == 50) -> {
+                    mSSVEPClass = 5.0
+                    updateTrainingPrompt("20.00Hz")
+                }
+                (second == 60) -> {
                     updateTrainingPrompt("Stop!")
                     updateTrainingPromptColor(Color.RED)
                     mSSVEPClass = 0.0
                     disconnectAllBLE()
                 }
-            }
-            if (eventSecondCountdown == mSDS) {
-                mMediaBeep.start()
             }
         }
     }
