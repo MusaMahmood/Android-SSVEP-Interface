@@ -789,36 +789,36 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     private fun updateTrainingRoutine(dataPoints: Int) {
         if (dataPoints % mSampleRate == 0 && mRunTrainingBool) {
             val second = dataPoints / mSampleRate
-            Log.d(TAG, "second: "+second.toString())
             val mSDS = mStimulusDelaySeconds.toInt()
+            Log.d(TAG, "mSDS:"+mSDS.toString()+" second: "+second.toString())
             if (second % mSDS == 0) mMediaBeep.start()
             when {
-                (second < 10) -> {
+                (second < mSDS) -> {
                     updateTrainingPromptColor(Color.GREEN)
                     mSSVEPClass = 0.0
                     updateTrainingPrompt("No stimulus: Null Class!")
                 }
-                (second == 10) -> {
+                (second == mSDS) -> {
                     mSSVEPClass = 1.0
                     updateTrainingPrompt("EYES CLOSED")
                 }
-                (second == 20) -> {
+                (second == 2*mSDS) -> {
                     mSSVEPClass = 2.0
                     updateTrainingPrompt("15.15Hz")
                 }
-                (second == 30) -> {
+                (second == 3*mSDS) -> {
                     mSSVEPClass = 3.0
                     updateTrainingPrompt("16.67hz")
                 }
-                (second == 40) -> {
+                (second == 4*mSDS) -> {
                     mSSVEPClass = 4.0
                     updateTrainingPrompt("18.51Hz")
                 }
-                (second == 50) -> {
+                (second == 5*mSDS) -> {
                     mSSVEPClass = 5.0
                     updateTrainingPrompt("20.00Hz")
                 }
-                (second == 60) -> {
+                (second == 6*mSDS) -> {
                     updateTrainingPrompt("Stop!")
                     updateTrainingPromptColor(Color.RED)
                     mSSVEPClass = 0.0
