@@ -600,18 +600,22 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                         mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), true)
                     }
 
-                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH1_SIGNAL) != null) {
+                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH1_SIGNAL) != null)
                         mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH1_SIGNAL), true)
-                    }
-                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH2_SIGNAL) != null) {
+                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH2_SIGNAL) != null)
                         mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH2_SIGNAL), true)
-                    }
-                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH3_SIGNAL) != null) {
+                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH3_SIGNAL) != null)
                         mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH3_SIGNAL), true)
-                    }
-                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH4_SIGNAL) != null) {
+                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH4_SIGNAL) != null)
                         mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH4_SIGNAL), true)
-                    }
+                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH5_SIGNAL) != null)
+                        mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH5_SIGNAL), true)
+                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH6_SIGNAL) != null)
+                        mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH6_SIGNAL), true)
+                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH7_SIGNAL) != null)
+                        mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH7_SIGNAL), true)
+                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH8_SIGNAL) != null)
+                        mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH8_SIGNAL), true)
                 }
 
                 if (AppConstant.SERVICE_BATTERY_LEVEL == service.uuid) { //Read the device battery percentage
