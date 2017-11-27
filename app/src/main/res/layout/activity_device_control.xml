@@ -54,7 +54,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="0.1"
-            android:text="Write New Settings" />
+            android:text="Write Default Settings" />
 
         <TextView
             android:id="@+id/batteryText"

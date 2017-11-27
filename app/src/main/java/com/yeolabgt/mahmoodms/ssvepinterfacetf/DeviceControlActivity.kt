@@ -42,6 +42,7 @@ import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.experimental.and
 
 /**
  * Created by mahmoodms on 5/31/2016.
@@ -265,12 +266,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         mExportButton.setOnClickListener { exportData() }
         writeNewSettings.setOnClickListener { //only read 2-ch datas
             val bytes = ADS1299_DEFAULT_BYTE_CONFIG
-            //NOTE: I disabled SRB1
-            if (mEEGConfigGattService != null) {
-                Log.e(TAG, "SendingCommand (byte): "+bytes.toString())
-                mActBle!!.writeCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), bytes)
-                //Should notify/update after writing
-            }
+            writeNewADS1299Settings(bytes)
         }
     }
 
@@ -573,13 +569,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             } else {
                 registerConfigBytes[20] = 0x00.toByte()
             }
-            Log.e(TAG, "bytesOriginal: "+DataChannel.byteArrayToHexString(ADS1299_DEFAULT_BYTE_CONFIG))
-            Log.e(TAG, "bytesToWrite: "+DataChannel.byteArrayToHexString(registerConfigBytes))
-            if (mEEGConfigGattService != null) {
-                Log.e(TAG, "SendingCommand (byte): "+registerConfigBytes.toString())
-                mActBle!!.writeCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), registerConfigBytes)
-                //Should notify/update after writing
-            }
+            writeNewADS1299Settings(registerConfigBytes)
             mGraphAdapterCh1PSDA!!.plotData = showPSDA
             mGraphAdapterCh2PSDA!!.plotData = showPSDA
             mFreqDomainPlotAdapter!!.setXyPlotVisibility(showPSDA)
@@ -600,6 +590,15 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             changeUIElementVisibility(showUIElements)
         }
         super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    private fun writeNewADS1299Settings(bytes: ByteArray) {
+        Log.e(TAG, "bytesOriginal: "+DataChannel.byteArrayToHexString(ADS1299_DEFAULT_BYTE_CONFIG))
+        if (mEEGConfigGattService != null) {
+            Log.e(TAG, "SendingCommand (byte): "+DataChannel.byteArrayToHexString(bytes))
+            mActBle!!.writeCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), bytes)
+            //Should notify/update after writing
+        }
     }
 
     private fun launchSettingsMenu() {
@@ -715,6 +714,17 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 val readValue = characteristic.value
                 Log.e(TAG,"onCharacteriticChanged: \n" +
                         "CHAR_EEG_CONFIG: "+DataChannel.byteArrayToHexString(readValue))
+                when (readValue[0] and 0x0F.toByte()) {
+                    0x06.toByte() -> mSampleRate = 250
+                    0x05.toByte() -> mSampleRate = 500
+                    0x04.toByte() -> mSampleRate = 1000
+                    0x03.toByte() -> mSampleRate = 2000
+                    0x02.toByte() -> mSampleRate = 4000
+                }
+                //RESET mCH1 & mCH2:
+                mCh1 = DataChannel(false, mMSBFirst, 4 * mSampleRate)
+                mCh2 = DataChannel(false, mMSBFirst, 4 * mSampleRate)
+                Log.e(TAG, "Updated Sample Rate: "+ mSampleRate.toString())
             }
         }
 
@@ -925,7 +935,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         }
         if (mLedWheelchairControlService != null && mWheelchairControl) {
             Log.e(TAG, "SendingCommand: "+command.toString())
-            Log.e(TAG, "SendingCommand (byte): "+bytes[0].toInt())
+            Log.e(TAG, "SendingCommand (byte): "+DataChannel.byteArrayToHexString(bytes))
             mActBle!!.writeCharacteristic(mBluetoothGattArray[mWheelchairGattIndex]!!, mLedWheelchairControlService!!.getCharacteristic(AppConstant.CHAR_WHEELCHAIR_CONTROL), bytes)
         }
     }
