@@ -264,11 +264,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         mRButton!!.setOnClickListener { executeWheelchairCommand(2) }
         mExportButton.setOnClickListener { exportData() }
         writeNewSettings.setOnClickListener { //only read 2-ch datas
-            val bytes = byteArrayOf(0x96.toByte(), 0xD0.toByte(), 0xEC.toByte(), 0x00.toByte(),
-                    0x00.toByte(), 0x00.toByte(), 0xE1.toByte(), 0xE1.toByte(), 0x00.toByte(),
-                    0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x0F.toByte(), 0x0F.toByte(),
-                    0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                    0x0F.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()) //NOTE: I disabled SRB1
+            val bytes = ADS1299_DEFAULT_BYTE_CONFIG
+            //NOTE: I disabled SRB1
             if (mEEGConfigGattService != null) {
                 Log.e(TAG, "SendingCommand (byte): "+bytes.toString())
                 mActBle!!.writeCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), bytes)
@@ -536,7 +533,53 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             if (mGraphAdapterCh1 != null) {
                 mFilterData = filterData
             }
-
+            /**
+             * Settings for ADS1299:
+             */
+            val registerConfigBytes = ADS1299_DEFAULT_BYTE_CONFIG
+            when (PreferencesFragment.setSampleRate(context)) {
+                0 -> {
+                    registerConfigBytes[0] = 0x96.toByte()
+                }
+                1 -> {
+                    registerConfigBytes[0] = 0x95.toByte()
+                }
+                2 -> {
+                    registerConfigBytes[0] = 0x94.toByte()
+                }
+                3 -> {
+                    registerConfigBytes[0] = 0x93.toByte()
+                }
+                4 -> {
+                    registerConfigBytes[0] = 0x92.toByte()
+                }
+            }
+            when (PreferencesFragment.setNumberChannelsEnabled(context)) {
+                1 -> {
+                    registerConfigBytes[4] = 0x60.toByte(); registerConfigBytes[5] = 0xE1.toByte(); registerConfigBytes[6] = 0xE1.toByte(); registerConfigBytes[7] = 0xE1.toByte()
+                }
+                2 -> {
+                    registerConfigBytes[4] = 0x60.toByte(); registerConfigBytes[5] = 0x60.toByte(); registerConfigBytes[6] = 0xE1.toByte(); registerConfigBytes[7] = 0xE1.toByte()
+                }
+                3 -> {
+                    registerConfigBytes[4] = 0x60.toByte(); registerConfigBytes[5] = 0x60.toByte(); registerConfigBytes[6] = 0x60.toByte(); registerConfigBytes[7] = 0xE1.toByte()
+                }
+                4 -> {
+                    registerConfigBytes[4] = 0x60.toByte(); registerConfigBytes[5] = 0x60.toByte(); registerConfigBytes[6] = 0x60.toByte(); registerConfigBytes[7] = 0x60.toByte()
+                }
+            }
+            if(PreferencesFragment.setSRB1(context)) {
+                registerConfigBytes[20] = 0x20.toByte()
+            } else {
+                registerConfigBytes[20] = 0x00.toByte()
+            }
+            Log.e(TAG, "bytesOriginal: "+DataChannel.byteArrayToHexString(ADS1299_DEFAULT_BYTE_CONFIG))
+            Log.e(TAG, "bytesToWrite: "+DataChannel.byteArrayToHexString(registerConfigBytes))
+            if (mEEGConfigGattService != null) {
+                Log.e(TAG, "SendingCommand (byte): "+registerConfigBytes.toString())
+                mActBle!!.writeCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), registerConfigBytes)
+                //Should notify/update after writing
+            }
             mGraphAdapterCh1PSDA!!.plotData = showPSDA
             mGraphAdapterCh2PSDA!!.plotData = showPSDA
             mFreqDomainPlotAdapter!!.setXyPlotVisibility(showPSDA)
@@ -717,6 +760,21 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             getDataRateBytes(characteristic.value.size)
         }
 
+        if (AppConstant.CHAR_EEG_CH5_SIGNAL == characteristic.uuid) {
+            getDataRateBytes(characteristic.value.size)
+        }
+
+        if (AppConstant.CHAR_EEG_CH6_SIGNAL == characteristic.uuid) {
+            getDataRateBytes(characteristic.value.size)
+        }
+
+        if (AppConstant.CHAR_EEG_CH7_SIGNAL == characteristic.uuid) {
+            getDataRateBytes(characteristic.value.size)
+        }
+
+        if (AppConstant.CHAR_EEG_CH8_SIGNAL == characteristic.uuid) {
+            getDataRateBytes(characteristic.value.size)
+        }
 
         if (mCh1!!.chEnabled && mCh2!!.chEnabled) {
             mNumber2ChPackets++
@@ -1104,6 +1162,13 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         val WINDOW_DIMENSION_LENGTH_NORMAL = 300
         val WINDOW_DIMENSION_LENGTH = WINDOW_DIMENSION_LENGTH_NORMAL * 2L
         val WINDOW_DIMENSION_WIDTH = 1L
+        val ADS1299_DEFAULT_BYTE_CONFIG = byteArrayOf(
+                0x96.toByte(), 0xD0.toByte(), 0xEC.toByte(), 0x00.toByte(), //CONFIG1-3, LOFF
+                0x60.toByte(), 0x60.toByte(), 0x60.toByte(), 0x60.toByte(), //CHSET 1-4
+                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), //CHSET 5-8
+                0x0F.toByte(), 0x0F.toByte(), // BIAS_SENSP/N
+                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), // LOFF_P/N (IGNORE)
+                0x0F.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()) //GPIO, MISC1 (0x20 for SRB1), MISC2, CONFIG4
         private val LABELS = arrayOf("Alpha", "15.15Hz", "16.67Hz", "18.51Hz", "20.00Hz")
         //Directory:
         private val MODEL_FILENAME = "file:///android_asset/opt_ssvep_net.pb"

@@ -1,6 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
 
+    <PreferenceCategory android:title="ADS1299 Preferences">
+
+        <ListPreference
+            android:defaultValue="3"
+            android:entries="@array/chEnable"
+            android:entryValues="@array/chEnableValues"
+            android:key="channel_list_preference"
+            android:title="Select Number Channels" />
+
+        <ListPreference
+            android:defaultValue="0"
+            android:entries="@array/sampleRate"
+            android:entryValues="@array/sampleRateValues"
+            android:key="sample_rate_list_preference"
+            android:title="Select Sample Rate" />
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="switch_srb1"
+            android:title="SRB 1" />
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="UI Elements">
         <SwitchPreference
             android:defaultValue="false"

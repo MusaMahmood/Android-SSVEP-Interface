@@ -52,12 +52,24 @@ class PreferencesFragment : PreferenceFragment() {
             return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(SETTINGS_SAVE_CLASS, true)
         }
 
+        fun setFilterData(context: Context): Boolean {
+            return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(SETTINGS_FILTER_DATA, false)
+        }
+
         fun setBitPrecision(context: Context): Boolean {
             return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(SETTINGS_BIT_PRECISION, true)
         }
 
-        fun setFilterData(context: Context): Boolean {
-            return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(SETTINGS_FILTER_DATA, false)
+        fun setNumberChannelsEnabled(context: Context): Int {
+            return PreferenceManager.getDefaultSharedPreferences(context).getString("channel_list_preference", "4").toInt()
+        }
+
+        fun setSampleRate(context: Context): Int {
+            return PreferenceManager.getDefaultSharedPreferences(context).getString("sample_rate_list_preference", "1").toInt()
+        }
+
+        fun setSRB1(context: Context): Boolean {
+            return PreferenceManager.getDefaultSharedPreferences(context).getBoolean("switch_srb1", false)
         }
     }
 }
