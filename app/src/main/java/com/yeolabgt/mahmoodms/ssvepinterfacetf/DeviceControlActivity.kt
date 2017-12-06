@@ -849,7 +849,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                     }
                 }
             }
-            Log.e(TAG, "totalDataPointsReceived: " + dataChannel.totalDataPointsReceived.toString())
         }
 
         dataChannel.dataBuffer = null
@@ -1179,11 +1178,12 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         val WINDOW_DIMENSION_WIDTH = 1L
         val ADS1299_DEFAULT_BYTE_CONFIG = byteArrayOf(
                 0x96.toByte(), 0xD0.toByte(), 0xEC.toByte(), 0x00.toByte(), //CONFIG1-3, LOFF
-                0x60.toByte(), 0x60.toByte(), 0x60.toByte(), 0x60.toByte(), //CHSET 1-4
+                0x20.toByte(), 0x20.toByte(), 0xE1.toByte(), 0xE1.toByte(), //CHSET 1-4
                 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), //CHSET 5-8
                 0x0F.toByte(), 0x0F.toByte(), // BIAS_SENSP/N
                 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), // LOFF_P/N (IGNORE)
                 0x0F.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()) //GPIO, MISC1 (0x20 for SRB1), MISC2, CONFIG4
+
         private val LABELS = arrayOf("Alpha", "15.15Hz", "16.67Hz", "18.51Hz", "20.00Hz")
         //Directory:
         private val MODEL_FILENAME = "file:///android_asset/opt_ssvep_net.pb"
