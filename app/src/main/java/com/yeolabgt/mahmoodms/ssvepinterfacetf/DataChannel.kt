@@ -8,17 +8,24 @@ import com.google.common.primitives.Bytes
  */
 
 internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classification:
-                           var classificationBufferSize: Int) {
+                           classificationBufferSize: Int) {
     var characteristicDataPacketBytes: ByteArray? = null
     var packetCounter: Short = 0
     var totalDataPointsReceived: Int = 0
     var dataBuffer: ByteArray? = null
+    var classificationBufferSize: Int = 1000
+        set(value) {
+            this.classificationBuffer = DoubleArray(value)
+            this.classificationBufferFloats = FloatArray(value)
+            field = value
+        }
     var classificationBuffer: DoubleArray
     var classificationBufferFloats: FloatArray
 
     init {
         this.packetCounter = 0
         this.totalDataPointsReceived = 0
+        this.classificationBufferSize = classificationBufferSize
         this.classificationBuffer = DoubleArray(classificationBufferSize)
         this.classificationBufferFloats = FloatArray(classificationBufferSize)
         Companion.MSBFirst = MSBFirst

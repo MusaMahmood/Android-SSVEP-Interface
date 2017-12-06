@@ -55,6 +55,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     private var mGraphAdapterCh1: GraphAdapter? = null
     private var mGraphAdapterCh2: GraphAdapter? = null
     private var mTimeDomainPlotAdapter: XYPlotAdapter? = null
+    private var mCh1: DataChannel? = null
+    private var mCh2: DataChannel? = null
     //Device Information
     private var mBleInitializedBoolean = false
     private lateinit var mBluetoothGattArray: Array<BluetoothGatt?>
@@ -264,7 +266,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         mLButton!!.setOnClickListener { executeWheelchairCommand(3) }
         mRButton!!.setOnClickListener { executeWheelchairCommand(2) }
         mExportButton.setOnClickListener { exportData() }
-        writeNewSettings.setOnClickListener { //only read 2-ch datas
+        writeNewSettings.setOnClickListener {
+            //only read 2-ch datas
             val bytes = ADS1299_DEFAULT_BYTE_CONFIG
             writeNewADS1299Settings(bytes)
         }
@@ -325,7 +328,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             Toast.makeText(this, "No Devices Queued, Restart!", Toast.LENGTH_SHORT).show()
         }
         mActBle = ActBle(this, mBluetoothManager, this)
-        mBluetoothGattArray = Array(deviceMacAddresses!!.size, {i -> mActBle!!.connect(mBluetoothDeviceArray[i]) })
+        mBluetoothGattArray = Array(deviceMacAddresses!!.size, { i -> mActBle!!.connect(mBluetoothDeviceArray[i]) })
         for (i in mBluetoothDeviceArray.indices) {
             Log.e(TAG, "Connecting to Device: " + (mBluetoothDeviceArray[i]!!.name + " " + mBluetoothDeviceArray[i]!!.address))
             if ("WheelchairControl" == mBluetoothDeviceArray[i]!!.name) {
@@ -363,7 +366,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                     mSampleRate = 250
                 }
             }
-            mPacketBuffer = mSampleRate/250
+            mPacketBuffer = mSampleRate / 250
             Log.e(TAG, "mSampleRate: " + mSampleRate + "Hz")
             fPSD = jLoadfPSD(mSampleRate)
             Log.d(TAG, "initializeBluetoothArray: jLoadfPSD: " + fPSD!!.size.toString())
@@ -564,7 +567,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                     registerConfigBytes[4] = 0x60.toByte(); registerConfigBytes[5] = 0x60.toByte(); registerConfigBytes[6] = 0x60.toByte(); registerConfigBytes[7] = 0x60.toByte()
                 }
             }
-            if(PreferencesFragment.setSRB1(context)) {
+            if (PreferencesFragment.setSRB1(context)) {
                 registerConfigBytes[20] = 0x20.toByte()
             } else {
                 registerConfigBytes[20] = 0x00.toByte()
@@ -622,11 +625,11 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 }
                 if (AppConstant.SERVICE_DEVICE_INFO == service.uuid) {
                     //Read the device serial number (if available)
-                    if(service.getCharacteristic(AppConstant.CHAR_SERIAL_NUMBER) != null) {
+                    if (service.getCharacteristic(AppConstant.CHAR_SERIAL_NUMBER) != null) {
                         mActBle!!.readCharacteristic(gatt, service.getCharacteristic(AppConstant.CHAR_SERIAL_NUMBER))
                     }
                     //Read the device software version (if available)
-                    if(service.getCharacteristic(AppConstant.CHAR_SOFTWARE_REV) != null) {
+                    if (service.getCharacteristic(AppConstant.CHAR_SOFTWARE_REV) != null) {
                         mActBle!!.readCharacteristic(gatt, service.getCharacteristic(AppConstant.CHAR_SOFTWARE_REV))
                     }
                 }
@@ -642,10 +645,14 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                         mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), true)
                     }
 
-                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH1_SIGNAL) != null)
+                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH1_SIGNAL) != null) {
                         mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH1_SIGNAL), true)
-                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH2_SIGNAL) != null)
+                        if (mCh1 == null) mCh1 = DataChannel(false, mMSBFirst, 4 * mSampleRate)
+                    }
+                    if (service.getCharacteristic(AppConstant.CHAR_EEG_CH2_SIGNAL) != null) {
                         mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH2_SIGNAL), true)
+                        if (mCh2 == null) mCh2 = DataChannel(false, mMSBFirst, 4 * mSampleRate)
+                    }
                     if (service.getCharacteristic(AppConstant.CHAR_EEG_CH3_SIGNAL) != null)
                         mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH3_SIGNAL), true)
                     if (service.getCharacteristic(AppConstant.CHAR_EEG_CH4_SIGNAL) != null)
@@ -684,7 +691,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         Log.i(TAG, "onCharacteristicRead")
         if (status == BluetoothGatt.GATT_SUCCESS) {
             if (AppConstant.CHAR_BATTERY_LEVEL == characteristic.uuid) {
-                if(characteristic.value!=null) {
+                if (characteristic.value != null) {
                     val batteryLevel = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0)
                     updateBatteryStatus(batteryLevel)
                     Log.i(TAG, "Battery Level :: " + batteryLevel)
@@ -694,8 +701,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             if (AppConstant.CHAR_EEG_CONFIG == characteristic.uuid) {
                 if (characteristic.value != null) {
                     val readValue = characteristic.value
-                    Log.e(TAG,"onCharacteriticRead: \n" +
-                            "CHAR_EEG_CONFIG: "+DataChannel.byteArrayToHexString(readValue))
+                    Log.e(TAG, "onCharacteriticRead: \n" +
+                            "CHAR_EEG_CONFIG: " + DataChannel.byteArrayToHexString(readValue))
                 }
             }
         } else {
@@ -704,16 +711,11 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     }
 
     override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-        if (mCh1 == null || mCh2 == null) {
-            mCh1 = DataChannel(false, mMSBFirst, 4 * mSampleRate)
-            mCh2 = DataChannel(false, mMSBFirst, 4 * mSampleRate)
-        }
-
         if (AppConstant.CHAR_EEG_CONFIG == characteristic.uuid) {
             if (characteristic.value != null) {
                 val readValue = characteristic.value
-                Log.e(TAG,"onCharacteriticChanged: \n" +
-                        "CHAR_EEG_CONFIG: "+DataChannel.byteArrayToHexString(readValue))
+                Log.e(TAG, "onCharacteriticChanged: \n" +
+                        "CHAR_EEG_CONFIG: " + DataChannel.byteArrayToHexString(readValue))
                 when (readValue[0] and 0x0F.toByte()) {
                     0x06.toByte() -> mSampleRate = 250
                     0x05.toByte() -> mSampleRate = 500
@@ -722,9 +724,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                     0x02.toByte() -> mSampleRate = 4000
                 }
                 //RESET mCH1 & mCH2:
-                mCh1 = DataChannel(false, mMSBFirst, 4 * mSampleRate)
-                mCh2 = DataChannel(false, mMSBFirst, 4 * mSampleRate)
-                Log.e(TAG, "Updated Sample Rate: "+ mSampleRate.toString())
+                mCh1?.classificationBufferSize = 4 * mSampleRate
+                mCh2?.classificationBufferSize = 4 * mSampleRate
+                Log.e(TAG, "Updated Sample Rate: " + mSampleRate.toString())
             }
         }
 
@@ -847,6 +849,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                     }
                 }
             }
+            Log.e(TAG, "totalDataPointsReceived: " + dataChannel.totalDataPointsReceived.toString())
         }
 
         dataChannel.dataBuffer = null
@@ -862,7 +865,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         if (dataPoints % mSampleRate == 0 && mRunTrainingBool) {
             val second = dataPoints / mSampleRate
             val mSDS = mStimulusDelaySeconds.toInt()
-            Log.d(TAG, "mSDS:"+mSDS.toString()+" second: "+second.toString())
+            Log.d(TAG, "mSDS:" + mSDS.toString() + " second: " + second.toString())
             if (second % mSDS == 0) mMediaBeep.start()
             when {
                 (second < mSDS) -> {
@@ -874,23 +877,23 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                     mSSVEPClass = 1.0
                     updateTrainingPrompt("EYES CLOSED")
                 }
-                (second == 2*mSDS) -> {
+                (second == 2 * mSDS) -> {
                     mSSVEPClass = 2.0
                     updateTrainingPrompt("15.15Hz")
                 }
-                (second == 3*mSDS) -> {
+                (second == 3 * mSDS) -> {
                     mSSVEPClass = 3.0
                     updateTrainingPrompt("16.67hz")
                 }
-                (second == 4*mSDS) -> {
+                (second == 4 * mSDS) -> {
                     mSSVEPClass = 4.0
                     updateTrainingPrompt("18.51Hz")
                 }
-                (second == 5*mSDS) -> {
+                (second == 5 * mSDS) -> {
                     mSSVEPClass = 5.0
                     updateTrainingPrompt("20.00Hz")
                 }
-                (second == 6*mSDS) -> {
+                (second == 6 * mSDS) -> {
                     updateTrainingPrompt("Stop!")
                     updateTrainingPromptColor(Color.RED)
                     mSSVEPClass = 0.0
@@ -934,8 +937,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             }
         }
         if (mLedWheelchairControlService != null && mWheelchairControl) {
-            Log.e(TAG, "SendingCommand: "+command.toString())
-            Log.e(TAG, "SendingCommand (byte): "+DataChannel.byteArrayToHexString(bytes))
+            Log.e(TAG, "SendingCommand: " + command.toString())
+            Log.e(TAG, "SendingCommand (byte): " + DataChannel.byteArrayToHexString(bytes))
             mActBle!!.writeCharacteristic(mBluetoothGattArray[mWheelchairGattIndex]!!, mLedWheelchairControlService!!.getCharacteristic(AppConstant.CHAR_WHEELCHAIR_CONTROL), bytes)
         }
     }
@@ -1107,15 +1110,19 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         mPSDCh2 = DoubleArray(mSampleRate)
         val getInstancePSD1 = DoubleArray(mSampleRate * 2)
         val getInstancePSD2 = DoubleArray(mSampleRate * 2)
-        System.arraycopy(mCh1!!.classificationBuffer, mSampleRate * 2, getInstancePSD1, 0, mSampleRate * 2)
-        System.arraycopy(mCh2!!.classificationBuffer, mSampleRate * 2, getInstancePSD2, 0, mSampleRate * 2)
-        if (mSampleRate < 8000) {
-            combinedPSDArray = jPSDExtraction(getInstancePSD1, getInstancePSD2, mSampleRate, if (getInstancePSD1.size == getInstancePSD2.size) getInstancePSD1.size else 0) //250 Hz: For PSDA/each channel[0>mSampleRate|mSampleRate:end]
-            System.arraycopy(combinedPSDArray, 0, mPSDCh1!!, 0, mSampleRate)
-            System.arraycopy(combinedPSDArray, mSampleRate, mPSDCh2!!, 0, mSampleRate)
+        if(mCh1!!.classificationBuffer.size == 4 * mSampleRate) {
+            System.arraycopy(mCh1!!.classificationBuffer, mSampleRate * 2, getInstancePSD1, 0, mSampleRate * 2)
+            System.arraycopy(mCh2!!.classificationBuffer, mSampleRate * 2, getInstancePSD2, 0, mSampleRate * 2)
+            if (mSampleRate < 8000) {
+                combinedPSDArray = jPSDExtraction(getInstancePSD1, getInstancePSD2, mSampleRate, if (getInstancePSD1.size == getInstancePSD2.size) getInstancePSD1.size else 0) //250 Hz: For PSDA/each channel[0>mSampleRate|mSampleRate:end]
+                System.arraycopy(combinedPSDArray, 0, mPSDCh1!!, 0, mSampleRate)
+                System.arraycopy(combinedPSDArray, mSampleRate, mPSDCh2!!, 0, mSampleRate)
+            } else {
+                Arrays.fill(mPSDCh1!!, 0.0)
+                Arrays.fill(mPSDCh2!!, 0.0)
+            }
         } else {
-            Arrays.fill(mPSDCh1!!, 0.0)
-            Arrays.fill(mPSDCh2!!, 0.0)
+            Log.e(TAG, "Classification Buffer Size: "+mCh1!!.classificationBuffer.size)
         }
     }
 
@@ -1157,8 +1164,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         internal var fPSDEndIndex = 44
         private var mSampleRate = 250
         //Data Channel Classes
-        internal var mCh1: DataChannel? = null
-        internal var mCh2: DataChannel? = null
         internal var mFilterData = false
         private var mPacketBuffer = 6
         //RSSI:
@@ -1182,6 +1187,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         private val LABELS = arrayOf("Alpha", "15.15Hz", "16.67Hz", "18.51Hz", "20.00Hz")
         //Directory:
         private val MODEL_FILENAME = "file:///android_asset/opt_ssvep_net.pb"
+
         //Note for companion object: JNI call must include Companion in call: e.g. package_class_Companion_function(...).
         //TODO: Still does not work when I try to call from the companion object.
         init {
