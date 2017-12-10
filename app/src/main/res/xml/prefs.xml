@@ -16,10 +16,19 @@
             android:entryValues="@array/sampleRateValues"
             android:key="sample_rate_list_preference"
             android:title="Select Sample Rate" />
+
+        <ListPreference
+            android:defaultValue="0"
+            android:entries="@array/ch12_gain"
+            android:entryValues="@array/ch12_gainValues"
+            android:key="gain_list_preference"
+            android:title="Select Gain (Ch 1 and 2)" />
+
         <SwitchPreference
             android:defaultValue="false"
             android:key="switch_srb1"
             android:title="SRB 1" />
+
     </PreferenceCategory>
 
     <PreferenceCategory android:title="UI Elements">
@@ -60,6 +69,5 @@
             android:key="bit_precision"
             android:title="Precision (32/64-bit)" />
     </PreferenceCategory>
-
 
 </PreferenceScreen>

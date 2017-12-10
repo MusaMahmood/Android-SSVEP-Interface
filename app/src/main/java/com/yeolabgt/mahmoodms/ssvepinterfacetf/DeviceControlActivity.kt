@@ -311,7 +311,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
 
     override fun onPause() {
         if (mRedrawer != null) mRedrawer!!.pause()
-        changeUIElementVisibility(false)
+//        changeUIElementVisibility(false)
         super.onPause()
     }
 
@@ -535,43 +535,31 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             /**
              * Settings for ADS1299:
              */
-            val registerConfigBytes = ADS1299_DEFAULT_BYTE_CONFIG
+            val registerConfigBytes = Arrays.copyOf(ADS1299_DEFAULT_BYTE_CONFIG, ADS1299_DEFAULT_BYTE_CONFIG.size)
             when (PreferencesFragment.setSampleRate(context)) {
-                0 -> {
-                    registerConfigBytes[0] = 0x96.toByte()
-                }
-                1 -> {
-                    registerConfigBytes[0] = 0x95.toByte()
-                }
-                2 -> {
-                    registerConfigBytes[0] = 0x94.toByte()
-                }
-                3 -> {
-                    registerConfigBytes[0] = 0x93.toByte()
-                }
-                4 -> {
-                    registerConfigBytes[0] = 0x92.toByte()
-                }
+                0 -> { registerConfigBytes[0] = 0x96.toByte() }
+                1 -> { registerConfigBytes[0] = 0x95.toByte() }
+                2 -> { registerConfigBytes[0] = 0x94.toByte() }
+                3 -> { registerConfigBytes[0] = 0x93.toByte() }
+                4 -> { registerConfigBytes[0] = 0x92.toByte() }
             }
-            when (PreferencesFragment.setNumberChannelsEnabled(context)) {
-                1 -> {
-                    registerConfigBytes[4] = 0x60.toByte(); registerConfigBytes[5] = 0xE1.toByte(); registerConfigBytes[6] = 0xE1.toByte(); registerConfigBytes[7] = 0xE1.toByte()
-                }
-                2 -> {
-                    registerConfigBytes[4] = 0x60.toByte(); registerConfigBytes[5] = 0x60.toByte(); registerConfigBytes[6] = 0xE1.toByte(); registerConfigBytes[7] = 0xE1.toByte()
-                }
-                3 -> {
-                    registerConfigBytes[4] = 0x60.toByte(); registerConfigBytes[5] = 0x60.toByte(); registerConfigBytes[6] = 0x60.toByte(); registerConfigBytes[7] = 0xE1.toByte()
-                }
-                4 -> {
-                    registerConfigBytes[4] = 0x60.toByte(); registerConfigBytes[5] = 0x60.toByte(); registerConfigBytes[6] = 0x60.toByte(); registerConfigBytes[7] = 0x60.toByte()
-                }
+            val numChEnabled = PreferencesFragment.setNumberChannelsEnabled(context)
+            //Set all to disable.
+            for (i in 4..7) registerConfigBytes[i] = 0xE1.toByte()
+
+            for (i in 4..(3+numChEnabled)) {
+                registerConfigBytes[i] = 0x00.toByte()
             }
+            val gain12 = PreferencesFragment.setGainCh12(context)
+            registerConfigBytes[4] = (gain12 shl 4).toByte()
+            registerConfigBytes[5] = (gain12 shl 4).toByte()
+//            val gain34 = 6
             if (PreferencesFragment.setSRB1(context)) {
                 registerConfigBytes[20] = 0x20.toByte()
             } else {
                 registerConfigBytes[20] = 0x00.toByte()
             }
+            Log.e(TAG, "SettingsNew: " + DataChannel.byteArrayToHexString(registerConfigBytes))
             writeNewADS1299Settings(registerConfigBytes)
             mGraphAdapterCh1PSDA!!.plotData = showPSDA
             mGraphAdapterCh2PSDA!!.plotData = showPSDA
@@ -930,8 +918,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             1 -> bytes[0] = 0x01.toByte() //Stop
             2 -> bytes[0] = 0xF0.toByte() //?
             3 -> bytes[0] = 0x0F.toByte()
-            4 // TODO: 6/27/2017 Disconnect instead of reverse?
-            -> bytes[0] = 0xFF.toByte()
+            4 -> bytes[0] = 0xFF.toByte() // TODO: 6/27/2017 Disconnect instead of reverse?
             else -> {
             }
         }
@@ -1178,7 +1165,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         val WINDOW_DIMENSION_WIDTH = 1L
         val ADS1299_DEFAULT_BYTE_CONFIG = byteArrayOf(
                 0x96.toByte(), 0xD0.toByte(), 0xEC.toByte(), 0x00.toByte(), //CONFIG1-3, LOFF
-                0x20.toByte(), 0x20.toByte(), 0xE1.toByte(), 0xE1.toByte(), //CHSET 1-4
+                0x40.toByte(), 0x40.toByte(), 0xE1.toByte(), 0xE1.toByte(), //CHSET 1-4
                 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), //CHSET 5-8
                 0x0F.toByte(), 0x0F.toByte(), // BIAS_SENSP/N
                 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), // LOFF_P/N (IGNORE)
