@@ -1165,7 +1165,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         val WINDOW_DIMENSION_WIDTH = 1L
         val ADS1299_DEFAULT_BYTE_CONFIG = byteArrayOf(
                 0x96.toByte(), 0xD0.toByte(), 0xEC.toByte(), 0x00.toByte(), //CONFIG1-3, LOFF
-                0x20.toByte(), 0x20.toByte(), 0xE1.toByte(), 0xE1.toByte(), //CHSET 1-4
+                0x40.toByte(), 0x40.toByte(), 0xE1.toByte(), 0xE1.toByte(), //CHSET 1-4
                 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), //CHSET 5-8
                 0x0F.toByte(), 0x0F.toByte(), // BIAS_SENSP/N
                 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), // LOFF_P/N (IGNORE)
