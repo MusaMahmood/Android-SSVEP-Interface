@@ -43,6 +43,7 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.experimental.and
+import kotlin.experimental.or
 
 /**
  * Created by mahmoodms on 5/31/2016.
@@ -544,15 +545,18 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 4 -> { registerConfigBytes[0] = 0x92.toByte() }
             }
             val numChEnabled = PreferencesFragment.setNumberChannelsEnabled(context)
+            Log.e(TAG, "numChEnabled: "+numChEnabled.toString())
             //Set all to disable.
             for (i in 4..7) registerConfigBytes[i] = 0xE1.toByte()
-
+            Log.e(TAG, "SettingsNew0: " + DataChannel.byteArrayToHexString(registerConfigBytes))
             for (i in 4..(3+numChEnabled)) {
                 registerConfigBytes[i] = 0x00.toByte()
             }
-            val gain12 = PreferencesFragment.setGainCh12(context)
-            registerConfigBytes[4] = (gain12 shl 4).toByte()
-            registerConfigBytes[5] = (gain12 shl 4).toByte()
+            Log.e(TAG, "SettingsNew1: " + DataChannel.byteArrayToHexString(registerConfigBytes))
+            val gain12 = PreferencesFragment.setGainCh12(context) //Check if ch enabled first
+            for (i in 4..5) {
+                registerConfigBytes[i] = registerConfigBytes[i] or (gain12 shl 4).toByte()
+            }
 //            val gain34 = 6
             if (PreferencesFragment.setSRB1(context)) {
                 registerConfigBytes[20] = 0x20.toByte()
