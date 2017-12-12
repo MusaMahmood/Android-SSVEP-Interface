@@ -555,9 +555,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             Log.e(TAG, "SettingsNew1: " + DataChannel.byteArrayToHexString(registerConfigBytes))
             val gain12 = PreferencesFragment.setGainCh12(context) //Check if ch enabled first
             for (i in 4..5) {
-                registerConfigBytes[i] = registerConfigBytes[i] or (gain12 shl 4).toByte()
+                if ((registerConfigBytes[i] and 0x80.toByte())!=0x80.toByte())
+                    registerConfigBytes[i] = registerConfigBytes[i] or (gain12 shl 4).toByte()
             }
-//            val gain34 = 6
             if (PreferencesFragment.setSRB1(context)) {
                 registerConfigBytes[20] = 0x20.toByte()
             } else {
