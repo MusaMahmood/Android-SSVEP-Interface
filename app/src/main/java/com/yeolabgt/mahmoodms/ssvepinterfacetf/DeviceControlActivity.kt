@@ -546,6 +546,26 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             }
             val numChEnabled = PreferencesFragment.setNumberChannelsEnabled(context)
             Log.e(TAG, "numChEnabled: "+numChEnabled.toString())
+            // Set
+            when (numChEnabled) {
+                1 -> {
+                    registerConfigBytes[12] = 0b0000_0001
+                    registerConfigBytes[13] = 0b0000_0001
+                }
+                2 -> {
+                    registerConfigBytes[12] = 0b0000_0011
+                    registerConfigBytes[13] = 0b0000_0011
+                }
+                3 -> {
+                    registerConfigBytes[12] = 0b0000_0111
+                    registerConfigBytes[13] = 0b0000_0111
+                }
+                4 -> {
+                    registerConfigBytes[12] = 0b0000_1111
+                    registerConfigBytes[13] = 0b0000_1111
+                }
+            }
+
             //Set all to disable.
             for (i in 4..7) registerConfigBytes[i] = 0xE1.toByte()
             Log.e(TAG, "SettingsNew0: " + DataChannel.byteArrayToHexString(registerConfigBytes))
@@ -862,33 +882,32 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 (second < mSDS) -> {
                     updateTrainingPromptColor(Color.GREEN)
                     mSSVEPClass = 0.0
-                    updateTrainingPrompt("No stimulus: Null Class!")
+                    updateTrainingPrompt("EYES CLOSED")
                 }
                 (second == mSDS) -> {
                     mSSVEPClass = 1.0
-                    updateTrainingPrompt("EYES CLOSED")
+                    updateTrainingPrompt("15.15Hz")
                 }
                 (second == 2 * mSDS) -> {
                     mSSVEPClass = 2.0
-                    updateTrainingPrompt("15.15Hz")
+                    updateTrainingPrompt("16.67hz")
                 }
                 (second == 3 * mSDS) -> {
                     mSSVEPClass = 3.0
-                    updateTrainingPrompt("16.67hz")
+                    updateTrainingPrompt("18.51Hz")
                 }
                 (second == 4 * mSDS) -> {
                     mSSVEPClass = 4.0
-                    updateTrainingPrompt("18.51Hz")
-                }
-                (second == 5 * mSDS) -> {
-                    mSSVEPClass = 5.0
                     updateTrainingPrompt("20.00Hz")
                 }
-                (second == 6 * mSDS) -> {
+                (second == 5 * mSDS) -> {
+                    mSSVEPClass = 0.0
                     updateTrainingPrompt("Stop!")
                     updateTrainingPromptColor(Color.RED)
-                    mSSVEPClass = 0.0
                     disconnectAllBLE()
+//                    mSSVEPClass = 5.0
+                }
+                (second == 6 * mSDS) -> {
                 }
             }
         }
