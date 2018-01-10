@@ -32,7 +32,7 @@ import android.widget.Toast
 import android.widget.ToggleButton
 
 import com.androidplot.util.Redrawer
-import com.google.common.primitives.Floats
+import com.google.common.primitives.Doubles
 import com.yeolabgt.mahmoodms.actblelibrary.ActBle
 import kotlinx.android.synthetic.main.activity_device_control.*
 
@@ -115,23 +115,29 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         if (mTFRunModel) {
             //Run TF Model: SEE ORIGINAL .py SCRIPT TO VERIFY CORRECT INPUTS!
             val outputScores = FloatArray(5)//5 is number of classes/labels
-            val ch1Doubles = FloatArray(WINDOW_DIMENSION_LENGTH_NORMAL)
-            System.arraycopy(mCh1!!.classificationBufferFloats,
+            // Extract features from last wlen=256 datapoints:
+            val ch1Doubles = DoubleArray(WINDOW_DIMENSION_LENGTH_NORMAL)
+            System.arraycopy(mCh1!!.classificationBuffer,
                     mCh1!!.classificationBufferSize - WINDOW_DIMENSION_LENGTH_NORMAL - 1,
                     ch1Doubles, 0, WINDOW_DIMENSION_LENGTH_NORMAL)
-            val ch2Doubles = FloatArray(WINDOW_DIMENSION_LENGTH_NORMAL)
-            System.arraycopy(mCh2!!.classificationBufferFloats,
+            val ch2Doubles = DoubleArray(WINDOW_DIMENSION_LENGTH_NORMAL)
+            System.arraycopy(mCh2!!.classificationBuffer,
                     mCh2!!.classificationBufferSize - WINDOW_DIMENSION_LENGTH_NORMAL - 1,
                     ch2Doubles, 0, WINDOW_DIMENSION_LENGTH_NORMAL)
-            val mSSVEPDataFeedTF = Floats.concat(ch1Doubles, ch2Doubles)
+            //TODO: it is easier to copy from each array into the larger array instead of doing this:
+            val chConcat = Doubles.concat(ch1Doubles, ch2Doubles)
+            val mSSVEPDataFeedTF = jTFPSDExtraction(chConcat)
             // 1 - feed probabilities:
             Log.i(TAG, "onCharacteristicChanged: TF_PRECALL_TIME, N#" + mNumberOfClassifierCalls.toString())
             mTFInferenceInterface!!.feed("keep_prob", floatArrayOf(1f))
-            mTFInferenceInterface!!.feed(INPUT_DATA_FEED, mSSVEPDataFeedTF, WINDOW_DIMENSION_WIDTH, WINDOW_DIMENSION_LENGTH)
+            mTFInferenceInterface!!.feed(INPUT_DATA_FEED, mSSVEPDataFeedTF, 2, 128)
             mTFInferenceInterface!!.run(mOutputScoresNames)
             mTFInferenceInterface!!.fetch(OUTPUT_DATA_FEED, outputScores)
-            Log.i(TAG, "[CALL#" + mNumberOfClassifierCalls.toString() + "]LABELS: " + Arrays.toString(LABELS))
-            Log.d(TAG, "TF outputScores: " + Arrays.toString(outputScores))
+            val yTF = DataChannel.getIndexOfLargest(outputScores)
+            Log.i(TAG, "CALL#" + mNumberOfClassifierCalls.toString() + ":\n" +
+                    "TF outputScores: " + Arrays.toString(outputScores))
+            val s = "SSVEP cPSDA\n [" + yTF.toString() + "]"
+            runOnUiThread { mYfitTextView!!.text = s }
             mNumberOfClassifierCalls++
         } else {
             Log.e(TAG, "[" + (mNumberOfClassifierCalls + 1).toString() + "] CALLING CLASSIFIER FUNCTION!")
@@ -205,7 +211,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         mLastTime = System.currentTimeMillis()
         mSSVEPClassTextView = findViewById(R.id.eegClassTextView)
         // Initialize Tensorflow Inference Interface
-        val customModelPath = Environment.getExternalStorageDirectory().absolutePath + "/Download/tensorflow_assets/opt_ssvep_net.pb"
+        val customModelPath = Environment.getExternalStorageDirectory().absolutePath +
+                "/Download/tensorflow_assets/opt_ssvep_net_8ch_wlen_256_S1S2.pb"
         val customModel = File(customModelPath)
         val embeddedModel = File(MODEL_FILENAME)
         Log.d(TAG, "onCreate: customModel.exists: " + customModel.exists().toString())
@@ -580,6 +587,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             }
             if (PreferencesFragment.setSRB1(context)) {
                 registerConfigBytes[20] = 0x20.toByte()
+                registerConfigBytes[13] = 0b0000_0000 // Turn off BIAS_SENSN with SRB 1
             } else {
                 registerConfigBytes[20] = 0x00.toByte()
             }
@@ -808,7 +816,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             if (mCh1!!.characteristicDataPacketBytes != null && mCh2!!.characteristicDataPacketBytes != null) {
                 mPrimarySaveDataFile!!.writeToDisk(mCh1!!.characteristicDataPacketBytes, mCh2!!.characteristicDataPacketBytes)
             }
-            if (mNumber2ChPackets % 10 == 0) { //Every x * 20 data points
+            if (mNumber2ChPackets % 20 == 0) { //Every x * 20 data points
                 val classifyTaskThread = Thread(mClassifyThread)
                 classifyTaskThread.start()
             }
@@ -1155,6 +1163,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
 
     private external fun jPSDExtraction(a: DoubleArray, b: DoubleArray, sampleRate: Int, len: Int): DoubleArray
 
+    private external fun jTFPSDExtraction(a: DoubleArray): FloatArray
+
     private external fun jLoadfPSD(sampleRate: Int): DoubleArray
 
     companion object {
@@ -1183,9 +1193,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         //Tensorflow CONSTANTS:
         val INPUT_DATA_FEED = "input"
         val OUTPUT_DATA_FEED = "output"
-        val WINDOW_DIMENSION_LENGTH_NORMAL = 300
-        val WINDOW_DIMENSION_LENGTH = WINDOW_DIMENSION_LENGTH_NORMAL * 2L
-        val WINDOW_DIMENSION_WIDTH = 1L
+        val WINDOW_DIMENSION_LENGTH_NORMAL = 256
+//        val WINDOW_DIMENSION_LENGTH = WINDOW_DIMENSION_LENGTH_NORMAL * 2L
+//        val WINDOW_DIMENSION_WIDTH = 1L
         val ADS1299_DEFAULT_BYTE_CONFIG = byteArrayOf(
                 0x96.toByte(), 0xD0.toByte(), 0xEC.toByte(), 0x00.toByte(), //CONFIG1-3, LOFF
                 0x40.toByte(), 0x40.toByte(), 0xE1.toByte(), 0xE1.toByte(), //CHSET 1-4

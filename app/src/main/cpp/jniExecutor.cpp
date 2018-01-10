@@ -6,6 +6,7 @@
 #include "classifySSVEP.h"
 #include "extractPowerSpectrum.h"
 #include "ssvep_filter_f32.h"
+#include "tf_psd_rescale_w256.h"
 
 /*Additional Includes*/
 #include <jni.h>
@@ -42,6 +43,19 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jClassifySSVE
     jdoubleArray m_result = env->NewDoubleArray(501);
     classifySSVEP(X1, X2, threshold, &Y[0], &Y[2]);
     env->SetDoubleArrayRegion(m_result, 0, 501, Y);
+    return m_result;
+}
+}
+
+extern "C" {
+JNIEXPORT jfloatArray JNICALL
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jTFPSDExtraction(
+        JNIEnv *env, jobject jobject1, jdoubleArray ch1_2_data) {
+    jdouble *X = env->GetDoubleArrayElements(ch1_2_data, NULL); if (X == NULL) LOGE("ERROR - C_ARRAY IS NULL");
+    jfloatArray m_result = env->NewFloatArray(256);
+    float Y[256]; //length/2*2=Divide by two for normal length, but we are looking at 2 vectors.
+    tf_psd_rescale_w256(X, Y);
+    env->SetFloatArrayRegion(m_result, 0, 256, Y);
     return m_result;
 }
 }
@@ -91,8 +105,8 @@ JNIEXPORT jint JNICALL
 Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jmainInitialization(
         JNIEnv *env, jobject obj, jboolean terminate) {
     if (!(bool) terminate) {
-        classifySSVEP_initialize();
-        extractPowerSpectrum_initialize();
+        classifySSVEP_initialize(); //Only need to call once.
+//        extractPowerSpectrum_initialize();
         return 0;
     } else {
         return -1;

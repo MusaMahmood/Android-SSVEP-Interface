@@ -80,6 +80,16 @@ internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classifi
             return result.toString()
         }
 
+        fun getIndexOfLargest(array: FloatArray?): Int {
+            if (array == null || array.isEmpty()) return -1 // null or empty
+
+            var largest = 0
+            for (i in 1 until array.size) {
+                if (array[i] > array[largest]) largest = i
+            }
+            return largest // position of the first largest found
+        }
+
         private var MSBFirst: Boolean = false
 
         fun bytesToFloat32(a1: Byte, a2: Byte, a3: Byte): Float {
