@@ -549,8 +549,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             // Set
             when (numChEnabled) {
                 1 -> {
-                    registerConfigBytes[12] = 0b0000_0001
-                    registerConfigBytes[13] = 0b0000_0001
+                    registerConfigBytes[12] = 0b0000_0001  //BIAS_SENSP
+                    registerConfigBytes[13] = 0b0000_0001  //BIAS_SENSN
                 }
                 2 -> {
                     registerConfigBytes[12] = 0b0000_0011
@@ -580,6 +580,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             }
             if (PreferencesFragment.setSRB1(context)) {
                 registerConfigBytes[20] = 0x20.toByte()
+                registerConfigBytes[13] = 0b0000_0000 // Turn off BIAS_SENSN with SRB 1
+
             } else {
                 registerConfigBytes[20] = 0x00.toByte()
             }
