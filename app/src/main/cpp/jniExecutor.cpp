@@ -7,6 +7,8 @@
 #include "extractPowerSpectrum.h"
 #include "ssvep_filter_f32.h"
 #include "tf_psd_rescale_w256.h"
+#include "tf_psd_rescale_w384.h"
+#include "tf_psd_rescale_w512.h"
 
 /*Additional Includes*/
 #include <jni.h>
@@ -50,12 +52,17 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jClassifySSVE
 extern "C" {
 JNIEXPORT jfloatArray JNICALL
 Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jTFPSDExtraction(
-        JNIEnv *env, jobject jobject1, jdoubleArray ch1_2_data) {
+        JNIEnv *env, jobject jobject1, jdoubleArray ch1_2_data, jint length) {
     jdouble *X = env->GetDoubleArrayElements(ch1_2_data, NULL); if (X == NULL) LOGE("ERROR - C_ARRAY IS NULL");
-    jfloatArray m_result = env->NewFloatArray(256);
-    float Y[256]; //length/2*2=Divide by two for normal length, but we are looking at 2 vectors.
-    tf_psd_rescale_w256(X, Y);
-    env->SetFloatArrayRegion(m_result, 0, 256, Y);
+    jfloatArray m_result = env->NewFloatArray(length);
+    float Y[length]; //length/2*2=Divide by two for normal length, but we are looking at 2 vectors.
+    if (length == 256)
+        tf_psd_rescale_w256(X, Y);
+    else if (length == 384)
+        tf_psd_rescale_w384(X, Y);
+    else if (length == 512)
+        tf_psd_rescale_w512(X, Y);
+    env->SetFloatArrayRegion(m_result, 0, length, Y);
     return m_result;
 }
 }

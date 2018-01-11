@@ -126,7 +126,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                     ch2Doubles, 0, WINDOW_DIMENSION_LENGTH_NORMAL)
             //TODO: it is easier to copy from each array into the larger array instead of doing this:
             val chConcat = Doubles.concat(ch1Doubles, ch2Doubles)
-            val mSSVEPDataFeedTF = jTFPSDExtraction(chConcat)
+            Log.i(TAG, "chConcat.size: "+chConcat.size)
+            val mSSVEPDataFeedTF = jTFPSDExtraction(chConcat, chConcat.size)
             // 1 - feed probabilities:
             Log.i(TAG, "onCharacteristicChanged: TF_PRECALL_TIME, N#" + mNumberOfClassifierCalls.toString())
             mTFInferenceInterface!!.feed("keep_prob", floatArrayOf(1f))
@@ -139,6 +140,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             val s = "SSVEP cPSDA\n [" + yTF.toString() + "]"
             runOnUiThread { mYfitTextView!!.text = s }
             mNumberOfClassifierCalls++
+            executeWheelchairCommand(yTF)
         } else {
             Log.e(TAG, "[" + (mNumberOfClassifierCalls + 1).toString() + "] CALLING CLASSIFIER FUNCTION!")
             y = when (mSampleRate) {
@@ -1163,7 +1165,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
 
     private external fun jPSDExtraction(a: DoubleArray, b: DoubleArray, sampleRate: Int, len: Int): DoubleArray
 
-    private external fun jTFPSDExtraction(a: DoubleArray): FloatArray
+    private external fun jTFPSDExtraction(a: DoubleArray, length: Int): FloatArray
 
     private external fun jLoadfPSD(sampleRate: Int): DoubleArray
 
