@@ -76,3 +76,9 @@ target_link_libraries( # Specifies the target library.
                        # Links the target library to the log library
                        # included in the NDK.
                        ${log-lib} )
+
+target_compile_options(ssvep-lib PRIVATE
+    "$<$<CONFIG:RELEASE>:-O3>"
+    "$<$<CONFIG:DEBUG>:-O3>"
+)
+
