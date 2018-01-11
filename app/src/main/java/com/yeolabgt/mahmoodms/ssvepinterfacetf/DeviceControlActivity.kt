@@ -126,8 +126,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                     ch2Doubles, 0, WINDOW_DIMENSION_LENGTH_NORMAL)
             //TODO: it is easier to copy from each array into the larger array instead of doing this:
             val chConcat = Doubles.concat(ch1Doubles, ch2Doubles)
-            Log.i(TAG, "chConcat.size: "+chConcat.size)
-            val mSSVEPDataFeedTF = jTFPSDExtraction(chConcat, chConcat.size)
+            Log.i(TAG, "chConcat.size/2: "+chConcat.size/2)
+            val mSSVEPDataFeedTF = jTFPSDExtraction(chConcat, chConcat.size/2)
             // 1 - feed probabilities:
             Log.i(TAG, "onCharacteristicChanged: TF_PRECALL_TIME, N#" + mNumberOfClassifierCalls.toString())
             mTFInferenceInterface!!.feed("keep_prob", floatArrayOf(1f))
