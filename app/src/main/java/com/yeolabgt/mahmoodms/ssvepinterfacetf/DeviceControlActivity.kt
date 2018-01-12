@@ -18,7 +18,6 @@ import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
-import android.support.v4.app.FragmentActivity
 import android.support.v4.app.NavUtils
 import android.support.v4.content.FileProvider
 import android.util.Log
@@ -47,7 +46,7 @@ import kotlin.experimental.or
  * Android Activity for Controlling Bluetooth LE Device Connectivity
  */
 
-class DeviceControlActivity : Activity(), ActBle.ActBleListener {
+class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptionsMenu.NoticeDialogListener {
     // Graphing Variables:
     private var mGraphInitializedBoolean = false
     private var mGraphAdapterCh1: GraphAdapter? = null
@@ -89,6 +88,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     //Data throughput counter
     private var mLastTime: Long = 0
     private var points = 0
+    private var mTensorflowWindowSize = 256
     private val mTimerHandler = Handler()
     private var mTimerEnabled = false
     //Data Variables:
@@ -111,19 +111,16 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         val y: DoubleArray
         if (mTFRunModel) {
             //Run TF Model: SEE ORIGINAL .py SCRIPT TO VERIFY CORRECT INPUTS!
-//            val window_size = 256 // points in time domain
-            val window_size = 384 // points in time domain
-//            val window_size = 512 // points in time domain
             val outputScores = FloatArray(5)//5 is number of classes/labels
             // Extract features from last wlen=256 datapoints:
-            val ch1Doubles = DoubleArray(window_size)
+            val ch1Doubles = DoubleArray(mTensorflowWindowSize)
             System.arraycopy(mCh1!!.classificationBuffer,
-                    mCh1!!.classificationBufferSize - window_size - 1,
-                    ch1Doubles, 0, window_size)
-            val ch2Doubles = DoubleArray(window_size)
+                    mCh1!!.classificationBufferSize - mTensorflowWindowSize - 1,
+                    ch1Doubles, 0, mTensorflowWindowSize)
+            val ch2Doubles = DoubleArray(mTensorflowWindowSize)
             System.arraycopy(mCh2!!.classificationBuffer,
-                    mCh2!!.classificationBufferSize - window_size - 1,
-                    ch2Doubles, 0, window_size)
+                    mCh2!!.classificationBufferSize - mTensorflowWindowSize - 1,
+                    ch2Doubles, 0, mTensorflowWindowSize)
             // TODO: it is easier to copy from each array into the larger array instead of doing this:
             val chConcat = Doubles.concat(ch1Doubles, ch2Doubles)
             Log.i(TAG, "chConcat.size/2: "+chConcat.size/2)
@@ -212,16 +209,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         changeUIElementVisibility(false)
         mLastTime = System.currentTimeMillis()
         mSSVEPClassTextView = findViewById(R.id.eegClassTextView)
-        // Initialize Tensorflow Inference Interface
-        val customModelPath = Environment.getExternalStorageDirectory().absolutePath + "/Download/tensorflow_assets/"
-        val customModel256 = customModelPath + "opt_ssvep_net_8ch_wlen_256_S1S2.pb"
-        val customModel384 = customModelPath + "opt_ssvep_net_8ch_wlen_384_S1S2.pb"
-        val customModel512 = customModelPath + "opt_ssvep_net_8ch_wlen_512_S1S2.pb"
-        val embeddedModel = File(MODEL_FILENAME)
-        Log.d(TAG, "onCreate: 256customModel.exists: " + File(customModel256).exists().toString())
-        Log.d(TAG, "onCreate: 384customModel.exists: " + File(customModel384).exists().toString())
-        Log.d(TAG, "onCreate: 512customModel.exists: " + File(customModel512).exists().toString())
-
         mOutputScoresNames = arrayOf(OUTPUT_DATA_FEED)
 
         //UI Listeners
@@ -242,11 +229,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             mGraphAdapterCh1!!.plotData = b
             mGraphAdapterCh2!!.plotData = !b
         }
-        mTensorflowSwitch.setOnCheckedChangeListener { compoundButton, b ->
+        mTensorflowSwitch.setOnCheckedChangeListener { _, b ->
             if (b) {
-
-
-                enableTensorFlowModel(customModel384, embeddedModel, compoundButton)
+                showNoticeDialog()
             } else {
                 //Reset counter:
                 mTFRunModel = false
@@ -266,25 +251,50 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         }
     }
 
-    private fun enableTensorFlowModel(ModelPath: String, embeddedModel: File, compoundButton: CompoundButton) {
+    private fun showNoticeDialog() {
+        val dialog = TensorflowOptionsMenu()
+        dialog.show(fragmentManager, "TFOM")
+    }
 
+    @Override
+    override fun onTensorflowOptionsClick(integerValue: Int) {
+        enableTensorFlowModel(File(MODEL_FILENAME), integerValue)
+    }
 
+    private fun enableTensorFlowModel(embeddedModel: File, integerValue: Int) {
+        val customModelPath = Environment.getExternalStorageDirectory().absolutePath + "/Download/tensorflow_assets/"
+        val customModel256 = customModelPath + "opt_ssvep_net_8ch_wlen_256_S1S2.pb"
+        val customModel384 = customModelPath + "opt_ssvep_net_8ch_wlen_384_S1S2.pb"
+        val customModel512 = customModelPath + "opt_ssvep_net_8ch_wlen_512_S1S2.pb"
+        Log.d(TAG, "onCreate: customModel.exists: [256: " + File(customModel256).exists().toString() +
+        " 384: " + File(customModel384).exists().toString() + " 512: " + File(customModel512).exists().toString())
+        val modelPath = when (integerValue) {
+            1 -> customModel256
+            2 -> customModel384
+            3 -> customModel512
+            else -> ""
+        }
+        mTensorflowWindowSize = when (integerValue) {
+            1 -> 256
+            2 -> 384
+            3 -> 512
+            else -> 256
+        }
         when {
-            File(ModelPath).exists() -> {
-                mTFInferenceInterface = TensorFlowInferenceInterface(assets, ModelPath)
+            File(modelPath).exists() -> {
+                mTFInferenceInterface = TensorFlowInferenceInterface(assets, modelPath)
                 //Reset counter:
                 mNumberOfClassifierCalls = 1
                 mTFRunModel = true
                 Log.i(TAG, "Tensorflow: customModel loaded")
             }
             embeddedModel.exists() -> { //Check if there's a model included:
-                compoundButton.isChecked = false
+                tensorflowClassificationSwitch.isChecked = false
                 mTFRunModel = false
                 Toast.makeText(applicationContext, "No TF Model Found!", Toast.LENGTH_LONG).show()
             }
-            else -> {
-                // No model found, continuing with original (reset switch)
-                compoundButton.isChecked = false
+            else -> { // No model found, continuing with original (reset switch)
+                tensorflowClassificationSwitch.isChecked = false
                 mTFRunModel = false
                 Toast.makeText(applicationContext, "No TF Model Found!", Toast.LENGTH_LONG).show()
             }
@@ -332,7 +342,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
 
     override fun onPause() {
         if (mRedrawer != null) mRedrawer!!.pause()
-//        changeUIElementVisibility(false)
         super.onPause()
     }
 
