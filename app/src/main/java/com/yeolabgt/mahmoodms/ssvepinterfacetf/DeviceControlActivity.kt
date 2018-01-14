@@ -149,7 +149,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                     val getInstance2 = DoubleArray(mSampleRate * 2)
                     System.arraycopy(mCh1!!.classificationBuffer, mSampleRate * 2, getInstance1, 0, mSampleRate * 2) //8000→end
                     System.arraycopy(mCh2!!.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2)
-
                     mNativeInterface.jClassifySSVEP(getInstance1, getInstance2, 1.5)
                 }
                 else -> doubleArrayOf(-1.0, -1.0)

@@ -39,12 +39,13 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jClassifySSVEP
 
     jdouble *X1 = env->GetDoubleArrayElements(ch1, NULL);
     jdouble *X2 = env->GetDoubleArrayElements(ch2, NULL);
-    double Y[501]; // First two values = Y; last 499 = cPSD
+    double Y[2]; // First two values = Y; last 499 = cPSD
+    double PSD[499]; // First two values = Y; last 499 = cPSD
     if (X1 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
     if (X2 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
-    jdoubleArray m_result = env->NewDoubleArray(501);
-    classifySSVEP(X1, X2, threshold, &Y[0], &Y[2]);
-    env->SetDoubleArrayRegion(m_result, 0, 501, Y);
+    classifySSVEP(X1, X2, threshold, &Y[0], &PSD[0]);
+    jdoubleArray m_result = env->NewDoubleArray(2);
+    env->SetDoubleArrayRegion(m_result, 0, 2, Y);
     return m_result;
 }
 }

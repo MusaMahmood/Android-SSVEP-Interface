@@ -18,6 +18,11 @@ class ClassifySSVEPTests {
     private val mNativeInterface = NativeInterfaceClass()
 
     @Test
+    fun testNativeInitialization() {
+        Assert.assertEquals(mNativeInterface.jmainInitialization(false), 0)
+    }
+
+    @Test
     fun jClassifyWorks() {
         val a = DoubleArray(1000)
         Arrays.fill(a, 0.0)
