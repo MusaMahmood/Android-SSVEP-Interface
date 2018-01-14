@@ -58,3 +58,4 @@ app/.externalNativeBuild/
 build/android-profile/
 build/
 app/gradleBuild/
+*.iml

@@ -107,6 +107,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     private val timeStamp: String
         get() = SimpleDateFormat("yyyy.MM.dd_HH.mm.ss", Locale.US).format(Date())
 
+    // Native Interface Function Handler:
+    private val mNativeInterface = NativeInterfaceClass()
+
     private val mClassifyThread = Runnable {
         val y: DoubleArray
         if (mTFRunModel) {
@@ -124,7 +127,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             // TODO: it is easier to copy from each array into the larger array instead of doing this:
             val chConcat = Doubles.concat(ch1Doubles, ch2Doubles)
             Log.i(TAG, "chConcat.size/2: "+chConcat.size/2)
-            val mSSVEPDataFeedTF = jTFPSDExtraction(chConcat, chConcat.size/2)
+            val mSSVEPDataFeedTF = mNativeInterface.jTFPSDExtraction(chConcat, chConcat.size/2)
             // 1 - feed probabilities:
             Log.i(TAG, "onCharacteristicChanged: TF_PRECALL_TIME, N#" + mNumberOfClassifierCalls.toString())
             mTFInferenceInterface!!.feed("keep_prob", floatArrayOf(1f))
@@ -146,7 +149,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                     val getInstance2 = DoubleArray(mSampleRate * 2)
                     System.arraycopy(mCh1!!.classificationBuffer, mSampleRate * 2, getInstance1, 0, mSampleRate * 2) //8000→end
                     System.arraycopy(mCh2!!.classificationBuffer, mSampleRate * 2, getInstance2, 0, mSampleRate * 2)
-                    jClassifySSVEP(getInstance1, getInstance2, 1.5)
+
+                    mNativeInterface.jClassifySSVEP(getInstance1, getInstance2, 1.5)
                 }
                 else -> doubleArrayOf(-1.0, -1.0)
             }
@@ -328,12 +332,12 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     }
 
     public override fun onResume() {
-        jmainInitialization(false)
+        mNativeInterface.jmainInitialization(false)
         val a = DoubleArray(1000)
         Arrays.fill(a, 0.0)
         val b = DoubleArray(1000)
         Arrays.fill(b, 0.0)
-        jClassifySSVEP(a, b, 2.28300)
+        mNativeInterface.jClassifySSVEP(a, b, 2.28300)
         if (mRedrawer != null) {
             mRedrawer!!.start()
         }
@@ -398,7 +402,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             }
             mPacketBuffer = mSampleRate / 250
             Log.e(TAG, "mSampleRate: " + mSampleRate + "Hz")
-            fPSD = jLoadfPSD(mSampleRate)
+            fPSD = mNativeInterface.jLoadfPSD(mSampleRate)
             Log.d(TAG, "initializeBluetoothArray: jLoadfPSD: " + fPSD!!.size.toString())
             if (!mGraphInitializedBoolean) setupGraph()
 
@@ -469,7 +473,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         }
 
         stopMonitoringRssiValue()
-        jmainInitialization(true) //Just a technicality, doesn't actually do anything
+        mNativeInterface.jmainInitialization(true) //Just a technicality, doesn't actually do anything
         super.onDestroy()
     }
 
@@ -854,7 +858,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
 
     private fun addToGraphBuffer(dataChannel: DataChannel, graphAdapter: GraphAdapter?, updateTrainingRoutine: Boolean) {
         if (mFilterData && dataChannel.totalDataPointsReceived > 1000) {
-            val filteredData = jSSVEPCfilter(dataChannel.classificationBuffer)
+            val filteredData = mNativeInterface.jSSVEPCfilter(dataChannel.classificationBuffer)
             graphAdapter!!.clearPlot()
 
             for (i in filteredData.indices) { // gA.addDataPointTimeDomain(y,x)
@@ -1153,7 +1157,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             System.arraycopy(mCh1!!.classificationBuffer, mSampleRate * 2, getInstancePSD1, 0, mSampleRate * 2)
             System.arraycopy(mCh2!!.classificationBuffer, mSampleRate * 2, getInstancePSD2, 0, mSampleRate * 2)
             if (mSampleRate < 8000) {
-                combinedPSDArray = jPSDExtraction(getInstancePSD1, getInstancePSD2, mSampleRate, if (getInstancePSD1.size == getInstancePSD2.size) getInstancePSD1.size else 0) //250 Hz: For PSDA/each channel[0>mSampleRate|mSampleRate:end]
+                combinedPSDArray = mNativeInterface.jPSDExtraction(getInstancePSD1, getInstancePSD2, mSampleRate, if (getInstancePSD1.size == getInstancePSD2.size) getInstancePSD1.size else 0) //250 Hz: For PSDA/each channel[0>mSampleRate|mSampleRate:end]
                 System.arraycopy(combinedPSDArray, 0, mPSDCh1!!, 0, mSampleRate)
                 System.arraycopy(combinedPSDArray, mSampleRate, mPSDCh2!!, 0, mSampleRate)
             } else {
@@ -1176,18 +1180,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         mGraphAdapterCh1PSDA!!.addDataPointsGeneric(fPSD!!, mPSDCh1!!, fPSDStartIndex, fPSDEndIndex)
         mGraphAdapterCh2PSDA!!.addDataPointsGeneric(fPSD!!, mPSDCh2!!, fPSDStartIndex, fPSDEndIndex)
     }
-
-    private external fun jSSVEPCfilter(data: DoubleArray): FloatArray
-
-    private external fun jmainInitialization(b: Boolean): Int
-
-    private external fun jClassifySSVEP(a: DoubleArray, b: DoubleArray, c: Double): DoubleArray
-
-    private external fun jPSDExtraction(a: DoubleArray, b: DoubleArray, sampleRate: Int, len: Int): DoubleArray
-
-    private external fun jTFPSDExtraction(a: DoubleArray, length: Int): FloatArray
-
-    private external fun jLoadfPSD(sampleRate: Int): DoubleArray
 
     companion object {
         val HZ = "0 Hz"
@@ -1215,9 +1207,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         //Tensorflow CONSTANTS:
         val INPUT_DATA_FEED = "input"
         val OUTPUT_DATA_FEED = "output"
-        val WINDOW_DIMENSION_LENGTH_NORMAL = 256
-//        val WINDOW_DIMENSION_LENGTH = WINDOW_DIMENSION_LENGTH_NORMAL * 2L
-//        val WINDOW_DIMENSION_WIDTH = 1L
         val ADS1299_DEFAULT_BYTE_CONFIG = byteArrayOf(
                 0x96.toByte(), 0xD0.toByte(), 0xEC.toByte(), 0x00.toByte(), //CONFIG1-3, LOFF
                 0x40.toByte(), 0x40.toByte(), 0xE1.toByte(), 0xE1.toByte(), //CHSET 1-4
@@ -1226,7 +1215,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), // LOFF_P/N (IGNORE)
                 0x0F.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()) //GPIO, MISC1 (0x20 for SRB1), MISC2, CONFIG4
 
-        private val LABELS = arrayOf("Alpha", "15.15Hz", "16.67Hz", "18.51Hz", "20.00Hz")
+//        private val LABELS = arrayOf("Alpha", "15.15Hz", "16.67Hz", "18.51Hz", "20.00Hz")
         //Directory:
         private val MODEL_FILENAME = "file:///android_asset/opt_ssvep_net.pb"
 

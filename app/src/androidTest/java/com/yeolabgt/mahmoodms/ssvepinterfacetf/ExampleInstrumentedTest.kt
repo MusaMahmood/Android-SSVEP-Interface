@@ -22,22 +22,4 @@ class ExampleInstrumentedTest {
         val appContext = InstrumentationRegistry.getTargetContext()
         assertEquals("com.yeolabgt.mahmoodms.ssvepinterfacetf", appContext.packageName)
     }
-
-    @Test
-    fun jClassifyWorks() {
-        val a = DoubleArray(1000)
-        Arrays.fill(a, 0.0)
-        val b = DoubleArray(1000)
-        Arrays.fill(b, 0.0)
-        val c = jClassifySSVEP(a, b, 1.1)
-        assertEquals(c[0], 0.0, 0.1) //c[0] because c is array of size 2
-    }
-
-    private external fun jClassifySSVEP(a: DoubleArray, b: DoubleArray, c: Double): DoubleArray
-
-    companion object {
-        init {
-            System.loadLibrary("ssvep-lib")
-        }
-    }
 }

@@ -20,7 +20,7 @@
 // Function Definitions
 extern "C" {
 JNIEXPORT jfloatArray JNICALL
-Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jSSVEPCfilter(
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jSSVEPCfilter(
         JNIEnv *env, jobject jobject1, jdoubleArray data) {
     jdouble *X1 = env->GetDoubleArrayElements(data, NULL);
     float Y[1000]; // First two values = Y; last 499 = cPSD
@@ -34,24 +34,7 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jSSVEPCfilter
 
 extern "C" {
 JNIEXPORT jdoubleArray JNICALL
-Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_ExampleInstrumentedTest_jClassifySSVEP(
-        JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2, jdouble threshold) {
-
-    jdouble *X1 = env->GetDoubleArrayElements(ch1, NULL);
-    jdouble *X2 = env->GetDoubleArrayElements(ch2, NULL);
-    double Y[501]; // First two values = Y; last 499 = cPSD
-    if (X1 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
-    if (X2 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
-    jdoubleArray m_result = env->NewDoubleArray(501);
-    classifySSVEP(X1, X2, threshold, &Y[0], &Y[2]);
-    env->SetDoubleArrayRegion(m_result, 0, 501, Y);
-    return m_result;
-}
-}
-
-extern "C" {
-JNIEXPORT jdoubleArray JNICALL
-Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jClassifySSVEP(
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jClassifySSVEP(
         JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2, jdouble threshold) {
 
     jdouble *X1 = env->GetDoubleArrayElements(ch1, NULL);
@@ -68,7 +51,7 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jClassifySSVE
 
 extern "C" {
 JNIEXPORT jfloatArray JNICALL
-Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jTFPSDExtraction(
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jTFPSDExtraction(
         JNIEnv *env, jobject jobject1, jdoubleArray ch1_2_data, jint length) {
     jdouble *X = env->GetDoubleArrayElements(ch1_2_data, NULL); if (X == NULL) LOGE("ERROR - C_ARRAY IS NULL");
     jfloatArray m_result = env->NewFloatArray(length);
@@ -86,7 +69,7 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jTFPSDExtract
 
 extern "C" {
 JNIEXPORT jdoubleArray JNICALL
-Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jPSDExtraction(
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jPSDExtraction(
         JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2, jint sampleRate, jint length) {
     jdouble *X1 = env->GetDoubleArrayElements(ch1, NULL); if (X1 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
     jdouble *X2 = env->GetDoubleArrayElements(ch2, NULL); if (X2 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
@@ -112,7 +95,7 @@ JNIEXPORT jdoubleArray JNICALL
  * @param jobject1
  * @return array of frequencies (Hz) corresponding to a raw input signal.
  */
-Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jLoadfPSD(
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jLoadfPSD(
         JNIEnv *env, jobject jobject1, jint sampleRate) {
     jdoubleArray m_result = env->NewDoubleArray(sampleRate);
     double fPSD[sampleRate];
@@ -126,7 +109,7 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jLoadfPSD(
 
 extern "C" {
 JNIEXPORT jint JNICALL
-Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jmainInitialization(
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jmainInitialization(
         JNIEnv *env, jobject obj, jboolean terminate) {
     if (!(bool) terminate) {
         classifySSVEP_initialize(); //Only need to call once.
