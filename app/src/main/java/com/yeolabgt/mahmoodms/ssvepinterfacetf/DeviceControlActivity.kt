@@ -359,7 +359,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         mActBle = ActBle(this, mBluetoothManager, this)
         mBluetoothGattArray = Array(deviceMacAddresses!!.size, { i -> mActBle!!.connect(mBluetoothDeviceArray[i]) })
         for (i in mBluetoothDeviceArray.indices) {
-            Log.e(TAG, "Connecting to Device: " + (mBluetoothDeviceArray[i]!!.name + " " + mBluetoothDeviceArray[i]!!.address))
+            Log.e(TAG, "Connecting to Device: Name: " + (mBluetoothDeviceArray[i]!!.name + " \nMAC:" + mBluetoothDeviceArray[i]!!.address))
             if ("WheelchairControl" == mBluetoothDeviceArray[i]!!.name) {
                 mWheelchairGattIndex = i
                 Log.e(TAG, "mWheelchairGattIndex: " + mWheelchairGattIndex)
@@ -367,33 +367,22 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             } else {
                 mEEGConfigGattIndex = i
             }
-            if ("EMG 250Hz" == mBluetoothDeviceArray[i]!!.name) {
-                mMSBFirst = false
-            } else if (mBluetoothDeviceArray[i]!!.name != null) {
-                if (mBluetoothDeviceArray[i]!!.name.toLowerCase().contains("nrf52")) {
-                    mMSBFirst = true
-                }
+
+            val btDeviceName = mBluetoothDeviceArray[i]?.name?.toLowerCase()
+            mMSBFirst = when {
+                btDeviceName == null -> false
+                btDeviceName.contains("EMG 250Hz") -> false
+                btDeviceName.contains("nrf52") -> true
+                else -> false
             }
-            val str = mBluetoothDeviceArray[i]!!.name.toLowerCase()
-            when {
-                str.contains("8k") -> {
-                    mSampleRate = 8000
-                }
-                str.contains("4k") -> {
-                    mSampleRate = 4000
-                }
-                str.contains("2k") -> {
-                    mSampleRate = 2000
-                }
-                str.contains("1k") -> {
-                    mSampleRate = 1000
-                }
-                str.contains("500") -> {
-                    mSampleRate = 500
-                }
-                else -> {
-                    mSampleRate = 250
-                }
+            mSampleRate = when {
+                btDeviceName == null -> 250
+                btDeviceName.contains("8k") -> 8000
+                btDeviceName.contains("4k") -> 4000
+                btDeviceName.contains("2k") -> 2000
+                btDeviceName.contains("1k") -> 1000
+                btDeviceName.contains("500") -> 500
+                else -> 250
             }
             mPacketBuffer = mSampleRate / 250
             Log.e(TAG, "mSampleRate: " + mSampleRate + "Hz")
