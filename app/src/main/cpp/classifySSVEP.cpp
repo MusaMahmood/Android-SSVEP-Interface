@@ -1073,17 +1073,17 @@ static void fESSVEP(const double X0[998], double Ppsd[5], double Lpsd[5], double
   }
 
   //  STFT:
-  stft(X0, S);
-  for (i0 = 0; i0 < 24; i0++) {
-    memcpy(&b_S[i0 * 74], &S[i0 * 513 + 25], 74U * sizeof(creal_T));
-  }
-
-  b_abs(b_S, dv7);
-  for (i0 = 0; i0 < 1776; i0++) {
-    dv7[i0] = dv7[i0] / 256.0 / 0.54000000000000059 + 1.0E-6;
-  }
-
-  b_log10(dv7);
+//  stft(X0, S);
+//  for (i0 = 0; i0 < 24; i0++) {
+//    memcpy(&b_S[i0 * 74], &S[i0 * 513 + 25], 74U * sizeof(creal_T));
+//  }
+//
+//  b_abs(b_S, dv7);
+//  for (i0 = 0; i0 < 1776; i0++) {
+//    dv7[i0] = dv7[i0] / 256.0 / 0.54000000000000059 + 1.0E-6;
+//  }
+//
+//  b_log10(dv7);
 }
 
 //

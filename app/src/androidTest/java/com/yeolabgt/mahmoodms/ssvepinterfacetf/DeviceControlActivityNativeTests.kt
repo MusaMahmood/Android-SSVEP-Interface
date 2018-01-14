@@ -13,7 +13,7 @@ import java.util.*
  */
 
 @RunWith(AndroidJUnit4::class)
-class classifySSVEPTest {
+class ClassifySSVEPTests {
 
     private val mNativeInterface = NativeInterfaceClass()
 
@@ -24,7 +24,7 @@ class classifySSVEPTest {
         val b = DoubleArray(1000)
         Arrays.fill(b, 0.0)
         val c = mNativeInterface.jClassifySSVEP(a, b, 1.0)
-        Log.d("classifySSVEPTest", Arrays.toString(c))
+        Log.d("ClassifySSVEPTests", Arrays.toString(c))
         Assert.assertEquals(c[0].toInt(), 0.0.toInt())
     }
 }

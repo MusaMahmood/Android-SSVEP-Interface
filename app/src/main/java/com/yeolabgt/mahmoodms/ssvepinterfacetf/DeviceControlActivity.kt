@@ -333,11 +333,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
 
     public override fun onResume() {
         mNativeInterface.jmainInitialization(false)
-        val a = DoubleArray(1000)
-        Arrays.fill(a, 0.0)
-        val b = DoubleArray(1000)
-        Arrays.fill(b, 0.0)
-        mNativeInterface.jClassifySSVEP(a, b, 2.28300)
         if (mRedrawer != null) {
             mRedrawer!!.start()
         }
@@ -607,9 +602,15 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             }
             Log.e(TAG, "SettingsNew1: " + DataChannel.byteArrayToHexString(registerConfigBytes))
             val gain12 = PreferencesFragment.setGainCh12(context) //Check if ch enabled first
-            for (i in 4..5) {
-                if ((registerConfigBytes[i] and 0x80.toByte())!=0x80.toByte())
-                    registerConfigBytes[i] = registerConfigBytes[i] or (gain12 shl 4).toByte()
+//            for (i in 4..5) {
+//                if ((registerConfigBytes[i] and 0x80.toByte())!=0x80.toByte())
+//                    registerConfigBytes[i] = registerConfigBytes[i] or (gain12 shl 4).toByte()
+//            }
+            for (i in 4..5) { //Checks first bit enabled on chs 1 & 2.
+                registerConfigBytes[i] = when (registerConfigBytes[i] and 0x80.toByte()) {
+                    0x80.toByte() -> registerConfigBytes[i] // do nothing if ch disabled
+                    else -> registerConfigBytes[i] or (gain12 shl 4).toByte() // Shift gain into 0xxx_0000 position
+                }
             }
             if (PreferencesFragment.setSRB1(context)) {
                 registerConfigBytes[20] = 0x20.toByte()
