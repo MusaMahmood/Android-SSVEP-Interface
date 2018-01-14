@@ -34,6 +34,23 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jSSVEPCfilter
 
 extern "C" {
 JNIEXPORT jdoubleArray JNICALL
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_ExampleInstrumentedTest_jClassifySSVEP(
+        JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2, jdouble threshold) {
+
+    jdouble *X1 = env->GetDoubleArrayElements(ch1, NULL);
+    jdouble *X2 = env->GetDoubleArrayElements(ch2, NULL);
+    double Y[501]; // First two values = Y; last 499 = cPSD
+    if (X1 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
+    if (X2 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
+    jdoubleArray m_result = env->NewDoubleArray(501);
+    classifySSVEP(X1, X2, threshold, &Y[0], &Y[2]);
+    env->SetDoubleArrayRegion(m_result, 0, 501, Y);
+    return m_result;
+}
+}
+
+extern "C" {
+JNIEXPORT jdoubleArray JNICALL
 Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_DeviceControlActivity_jClassifySSVEP(
         JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2, jdouble threshold) {
 
