@@ -845,8 +845,10 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                 val classifyTaskThread = Thread(mClassifyThread)
                 classifyTaskThread.start()
             }
-            val powerSpectrumThreadTask = Thread(mPowerSpectrumRunnableThread)
-            powerSpectrumThreadTask.start()
+            if (mNumber2ChPackets % 3 == 0) {
+                val powerSpectrumThreadTask = Thread(mPowerSpectrumRunnableThread)
+                powerSpectrumThreadTask.start()
+            }
         }
 
         runOnUiThread {
