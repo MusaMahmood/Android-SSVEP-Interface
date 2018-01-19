@@ -98,11 +98,11 @@ JNIEXPORT jdoubleArray JNICALL
  */
 Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jLoadfPSD(
         JNIEnv *env, jobject jobject1, jint sampleRate, jint win_length) {
-    jdoubleArray m_result = env->NewDoubleArray(sampleRate);
     double fPSD[win_length/2];
     for (int i = 0; i < win_length/2; i++) {
         fPSD[i] = (double) i * (double) sampleRate / (double) win_length;
     }
+    jdoubleArray m_result = env->NewDoubleArray(win_length/2);
     env->SetDoubleArrayRegion(m_result, 0, win_length/2, fPSD);
     return m_result;
 }
