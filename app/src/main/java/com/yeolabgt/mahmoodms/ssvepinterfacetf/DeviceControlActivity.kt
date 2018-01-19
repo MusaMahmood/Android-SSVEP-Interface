@@ -385,7 +385,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             }
             mPacketBuffer = mSampleRate / 250
             Log.e(TAG, "mSampleRate: " + mSampleRate + "Hz")
-            fPSD = mNativeInterface.jLoadfPSD(mSampleRate)
+            fPSD = mNativeInterface.jLoadfPSD(mSampleRate, mWindowLength)
             Log.d(TAG, "initializeBluetoothArray: jLoadfPSD: " + fPSD!!.size.toString())
             if (!mGraphInitializedBoolean) setupGraph()
 
@@ -892,7 +892,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
 
     private val mPowerSpectrumRunnableThread = Runnable {
         runPowerSpectrum()
-        powerSpectrumUpdateUI()
     }
 
     private fun updateTrainingRoutine(dataPoints: Int) {
@@ -1137,10 +1136,15 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     }
 
     private fun runPowerSpectrum() {
-        val combinedPSDArray: DoubleArray
-        mPSDCh1 = DoubleArray(mSampleRate)
-        mPSDCh2 = DoubleArray(mSampleRate)
-        val getInstancePSD1 = DoubleArray(mSampleRate * 2)
+        val bufferLastIndex = (mCh1?.classificationBufferSize ?: 1000) - 1
+        val ch1 = Arrays.copyOfRange(mCh1?.classificationBuffer, bufferLastIndex-mWindowLength-1, bufferLastIndex-1)
+        val ch2 = Arrays.copyOfRange(mCh2?.classificationBuffer, bufferLastIndex-mWindowLength-1, bufferLastIndex-1)
+        val concat = Doubles.concat(ch1, ch2)
+        val extractedPSD = mNativeInterface.jTFPSDExtraction(concat, mWindowLength)
+        val psdCh1 = Arrays.copyOfRange(extractedPSD, 0, mWindowLength/2 - 1)
+        val psdCh2 = Arrays.copyOfRange(extractedPSD, mWindowLength/2, mWindowLength - 1)
+        powerSpectrumUpdateUI(psdCh1, psdCh2)
+        /*val getInstancePSD1 = DoubleArray(mSampleRate * 2)
         val getInstancePSD2 = DoubleArray(mSampleRate * 2)
         if(mCh1!!.classificationBuffer.size == 4 * mSampleRate) {
             System.arraycopy(mCh1!!.classificationBuffer, mSampleRate * 2, getInstancePSD1, 0, mSampleRate * 2)
@@ -1155,10 +1159,10 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             }
         } else {
             Log.e(TAG, "Classification Buffer Size: "+mCh1!!.classificationBuffer.size)
-        }
+        }*/
     }
 
-    private fun powerSpectrumUpdateUI() {
+    private fun powerSpectrumUpdateUI(mPSDCh1: FloatArray, mPSDCh2: FloatArray) {
         mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex
         mGraphAdapterCh1PSDA!!.setSeriesHistoryDataPoints(mPSDDataPointsToShow)
         mGraphAdapterCh2PSDA!!.setSeriesHistoryDataPoints(mPSDDataPointsToShow)
@@ -1166,8 +1170,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             mFreqDomainPlotAdapter!!.setXyPlotDomainIncrement(6.0)
         else
             mFreqDomainPlotAdapter!!.setXyPlotDomainIncrement(2.0)
-        mGraphAdapterCh1PSDA!!.addDataPointsGeneric(fPSD!!, mPSDCh1!!, fPSDStartIndex, fPSDEndIndex)
-        mGraphAdapterCh2PSDA!!.addDataPointsGeneric(fPSD!!, mPSDCh2!!, fPSDStartIndex, fPSDEndIndex)
+        mGraphAdapterCh1PSDA!!.addDataPointsGeneric(fPSD!!, mPSDCh1, fPSDStartIndex, fPSDEndIndex)
+        mGraphAdapterCh2PSDA!!.addDataPointsGeneric(fPSD!!, mPSDCh2, fPSDStartIndex, fPSDEndIndex)
     }
 
     companion object {
@@ -1179,8 +1183,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         var mRedrawer: Redrawer? = null
         // Power Spectrum Graph Data:
         private var fPSD: DoubleArray? = null
-        private var mPSDCh1: DoubleArray? = null
-        private var mPSDCh2: DoubleArray? = null
+        private var mWindowLength: Int = 512
         private var mPSDDataPointsToShow = 0
         internal var fPSDStartIndex = 16
         internal var fPSDEndIndex = 44
