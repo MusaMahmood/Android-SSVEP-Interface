@@ -5,7 +5,7 @@
 // File: tf_psd_rescale_w256.cpp
 //
 // MATLAB Coder version            : 3.3
-// C/C++ source code generated on  : 10-Jan-2018 11:12:05
+// C/C++ source code generated on  : 18-Jan-2018 19:50:27
 //
 
 // Include Files
@@ -17,6 +17,7 @@ static void fft(const double x[256], creal_T y[256]);
 static double mean(const double x[256]);
 static void power(const double a[256], double y[256]);
 static void repmat(const double a[256], double b[256]);
+static void rescale_minmax(const double X[128], double Y[128]);
 static double sum(const double x[256]);
 static void tf_welch_psd(const double signals[256], double fs, const double
   window[256], double CSM[128]);
@@ -41,7 +42,7 @@ static void fft(const double x[256], creal_T y[256])
   int istart;
   int j;
   double twid_re;
-  static const double dv3[129] = { 1.0, 0.99969881869620425, 0.99879545620517241,
+  static const double dv4[129] = { 1.0, 0.99969881869620425, 0.99879545620517241,
     0.99729045667869021, 0.99518472667219693, 0.99247953459871,
     0.989176509964781, 0.98527764238894122, 0.98078528040323043,
     0.97570213003852857, 0.970031253194544, 0.96377606579543984,
@@ -86,7 +87,7 @@ static void fft(const double x[256], creal_T y[256])
     -0.99969881869620425, -1.0 };
 
   double twid_im;
-  static const double dv4[129] = { 0.0, -0.024541228522912288,
+  static const double dv5[129] = { 0.0, -0.024541228522912288,
     -0.049067674327418015, -0.073564563599667426, -0.0980171403295606,
     -0.1224106751992162, -0.14673047445536175, -0.17096188876030122,
     -0.19509032201612825, -0.2191012401568698, -0.24298017990326387,
@@ -176,8 +177,8 @@ static void fft(const double x[256], creal_T y[256])
 
     istart = 1;
     for (j = ju; j < 128; j += ju) {
-      twid_re = dv3[j];
-      twid_im = dv4[j];
+      twid_re = dv4[j];
+      twid_im = dv5[j];
       i = istart;
       ihi = istart + iheight;
       while (i < ihi) {
@@ -241,6 +242,76 @@ static void repmat(const double a[256], double b[256])
 }
 
 //
+// Arguments    : const double X[128]
+//                double Y[128]
+// Return Type  : void
+//
+static void rescale_minmax(const double X[128], double Y[128])
+{
+  int ixstart;
+  double mtmp;
+  int ix;
+  boolean_T exitg1;
+  double b_mtmp;
+  ixstart = 1;
+  mtmp = X[0];
+  if (rtIsNaN(X[0])) {
+    ix = 2;
+    exitg1 = false;
+    while ((!exitg1) && (ix < 129)) {
+      ixstart = ix;
+      if (!rtIsNaN(X[ix - 1])) {
+        mtmp = X[ix - 1];
+        exitg1 = true;
+      } else {
+        ix++;
+      }
+    }
+  }
+
+  if (ixstart < 128) {
+    while (ixstart + 1 < 129) {
+      if (X[ixstart] < mtmp) {
+        mtmp = X[ixstart];
+      }
+
+      ixstart++;
+    }
+  }
+
+  ixstart = 1;
+  b_mtmp = X[0];
+  if (rtIsNaN(X[0])) {
+    ix = 2;
+    exitg1 = false;
+    while ((!exitg1) && (ix < 129)) {
+      ixstart = ix;
+      if (!rtIsNaN(X[ix - 1])) {
+        b_mtmp = X[ix - 1];
+        exitg1 = true;
+      } else {
+        ix++;
+      }
+    }
+  }
+
+  if (ixstart < 128) {
+    while (ixstart + 1 < 129) {
+      if (X[ixstart] > b_mtmp) {
+        b_mtmp = X[ixstart];
+      }
+
+      ixstart++;
+    }
+  }
+
+  b_mtmp -= mtmp;
+  for (ixstart = 0; ixstart < 128; ixstart++) {
+    Y[ixstart] = (X[ixstart] - mtmp) / b_mtmp;
+  }
+}
+
+//
 // Arguments    : const double x[256]
 // Return Type  : double
 //
@@ -274,7 +345,7 @@ static void tf_welch_psd(const double signals[256], double fs, const double
   int i;
   double b_signals[256];
   creal_T Data_Block[256];
-  double dv2[256];
+  double dv3[256];
 
   //  Function for spectra estimation by Welch's method
   //  Developed by Luiz A. Baccala, Fl?vio Caduda and Luciano Caldas, all from
@@ -341,8 +412,8 @@ static void tf_welch_psd(const double signals[256], double fs, const double
   //  IS FOR FAN RIG BEAMFORMING CODE
   //  P(:,c) = Data_Block(:,aa).*conj(Data_Block(:,b)); % THIS IS THE ORIGINAL LINE 
   //  Sum the spectrums up ...
-  power(window, dv2);
-  a = sum(dv2) * fs;
+  power(window, dv3);
+  a = sum(dv3) * fs;
 
   //  Average them out
   //  for a = 1:sensors
@@ -366,7 +437,6 @@ static void tf_welch_psd(const double signals[256], double fs, const double
 //
 void tf_psd_rescale_w256(const double X[512], float Y[256])
 {
-  int ch;
   static const double dv0[256] = { 0.0, 0.00015177401106419852,
     0.00060700390285500783, 0.0013654133071059893, 0.0024265417964677849,
     0.0037897451640321322, 0.0054541958144270208, 0.0074188832662467341,
@@ -455,76 +525,24 @@ void tf_psd_rescale_w256(const double X[512], float Y[256])
     0.00015177401106419852, 0.0 };
 
   double dv1[128];
-  int ixstart;
-  float mtmp;
-  int ix;
-  boolean_T exitg1;
-  float b_mtmp;
-  memset(&Y[0], 0, sizeof(float) << 8);
-  for (ch = 0; ch < 2; ch++) {
-    tf_welch_psd(*(double (*)[256])&X[ch << 8], 250.0, dv0, dv1);
-    for (ixstart = 0; ixstart < 128; ixstart++) {
-      Y[ch + (ixstart << 1)] = (float)dv1[ixstart];
-    }
-
-    //
-    ixstart = 1;
-    mtmp = Y[ch];
-    if (rtIsNaNF(Y[ch])) {
-      ix = 2;
-      exitg1 = false;
-      while ((!exitg1) && (ix < 129)) {
-        ixstart = ix;
-        if (!rtIsNaNF(Y[ch + ((ix - 1) << 1)])) {
-          mtmp = Y[ch + ((ix - 1) << 1)];
-          exitg1 = true;
-        } else {
-          ix++;
-        }
-      }
-    }
-
-    if (ixstart < 128) {
-      while (ixstart + 1 < 129) {
-        if (Y[ch + (ixstart << 1)] < mtmp) {
-          mtmp = Y[ch + (ixstart << 1)];
-        }
-
-        ixstart++;
-      }
-    }
-
-    ixstart = 1;
-    b_mtmp = Y[ch];
-    if (rtIsNaNF(Y[ch])) {
-      ix = 2;
-      exitg1 = false;
-      while ((!exitg1) && (ix < 129)) {
-        ixstart = ix;
-        if (!rtIsNaNF(Y[ch + ((ix - 1) << 1)])) {
-          b_mtmp = Y[ch + ((ix - 1) << 1)];
-          exitg1 = true;
-        } else {
-          ix++;
-        }
-      }
-    }
-
-    if (ixstart < 128) {
-      while (ixstart + 1 < 129) {
-        if (Y[ch + (ixstart << 1)] > b_mtmp) {
-          b_mtmp = Y[ch + (ixstart << 1)];
-        }
-
-        ixstart++;
-      }
-    }
-
-    b_mtmp -= mtmp;
-    for (ixstart = 0; ixstart < 128; ixstart++) {
-      Y[ch + (ixstart << 1)] = (Y[ch + (ixstart << 1)] - mtmp) / b_mtmp;
-    }
+  double dv2[128];
+  int i0;
+  tf_welch_psd(*(double (*)[256])&X[0], 250.0, dv0, dv1);
+  rescale_minmax(dv1, dv2);
+  for (i0 = 0; i0 < 128; i0++) {
+    Y[i0] = (float)dv2[i0];
   }
+
+  tf_welch_psd(*(double (*)[256])&X[256], 250.0, dv0, dv1);
+  rescale_minmax(dv1, dv2);
+  for (i0 = 0; i0 < 128; i0++) {
+    Y[128 + i0] = (float)dv2[i0];
+  }
+
+  //  for ch = 1:2
+  //     Y(ch,:) = tf_welch_psd(X(:,ch), Fs, hannWin(256)); %
+  //     Y(ch,:) = rescale_minmax(Y(ch,:));
+  //  end
 }
 
 //

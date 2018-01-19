@@ -5,7 +5,7 @@
 // File: tf_psd_rescale_w384.cpp
 //
 // MATLAB Coder version            : 3.3
-// C/C++ source code generated on  : 11-Jan-2018 11:16:40
+// C/C++ source code generated on  : 18-Jan-2018 20:00:05
 //
 
 // Include Files
@@ -24,6 +24,7 @@ static void r2br_r2dit_trig(const creal_T x[767], const double costab[513],
 static void r2br_r2dit_trig_impl(const creal_T x[384], int xoffInit, const
   double costab[513], const double sintab[513], creal_T y[1024]);
 static void repmat(const double a[384], double b[384]);
+static void rescale_minmax(const double X[192], double Y[192]);
 static double sum(const double x[384]);
 static void tf_welch_psd(const double signals[384], double fs, const double
   window[384], double CSM[192]);
@@ -958,6 +959,76 @@ static void repmat(const double a[384], double b[384])
 }
 
 //
+// Arguments    : const double X[192]
+//                double Y[192]
+// Return Type  : void
+//
+static void rescale_minmax(const double X[192], double Y[192])
+{
+  int ixstart;
+  double mtmp;
+  int ix;
+  boolean_T exitg1;
+  double b_mtmp;
+  ixstart = 1;
+  mtmp = X[0];
+  if (rtIsNaN(X[0])) {
+    ix = 2;
+    exitg1 = false;
+    while ((!exitg1) && (ix < 193)) {
+      ixstart = ix;
+      if (!rtIsNaN(X[ix - 1])) {
+        mtmp = X[ix - 1];
+        exitg1 = true;
+      } else {
+        ix++;
+      }
+    }
+  }
+
+  if (ixstart < 192) {
+    while (ixstart + 1 < 193) {
+      if (X[ixstart] < mtmp) {
+        mtmp = X[ixstart];
+      }
+
+      ixstart++;
+    }
+  }
+
+  ixstart = 1;
+  b_mtmp = X[0];
+  if (rtIsNaN(X[0])) {
+    ix = 2;
+    exitg1 = false;
+    while ((!exitg1) && (ix < 193)) {
+      ixstart = ix;
+      if (!rtIsNaN(X[ix - 1])) {
+        b_mtmp = X[ix - 1];
+        exitg1 = true;
+      } else {
+        ix++;
+      }
+    }
+  }
+
+  if (ixstart < 192) {
+    while (ixstart + 1 < 193) {
+      if (X[ixstart] > b_mtmp) {
+        b_mtmp = X[ixstart];
+      }
+
+      ixstart++;
+    }
+  }
+
+  b_mtmp -= mtmp;
+  for (ixstart = 0; ixstart < 192; ixstart++) {
+    Y[ixstart] = (X[ixstart] - mtmp) / b_mtmp;
+  }
+}
+
+//
 // Arguments    : const double x[384]
 // Return Type  : double
 //
@@ -991,7 +1062,7 @@ static void tf_welch_psd(const double signals[384], double fs, const double
   int i;
   double b_signals[384];
   creal_T Data_Block[384];
-  double dv2[384];
+  double dv3[384];
 
   //  Function for spectra estimation by Welch's method
   //  Developed by Luiz A. Baccala, Fl?vio Caduda and Luciano Caldas, all from
@@ -1058,8 +1129,8 @@ static void tf_welch_psd(const double signals[384], double fs, const double
   //  IS FOR FAN RIG BEAMFORMING CODE
   //  P(:,c) = Data_Block(:,aa).*conj(Data_Block(:,b)); % THIS IS THE ORIGINAL LINE 
   //  Sum the spectrums up ...
-  power(window, dv2);
-  a = sum(dv2) * fs;
+  power(window, dv3);
+  a = sum(dv3) * fs;
 
   //  Average them out
   //  for a = 1:sensors
@@ -1084,7 +1155,6 @@ static void tf_welch_psd(const double signals[384], double fs, const double
 //
 void tf_psd_rescale_w384(const double X[768], float Y[384])
 {
-  int ch;
   static const double dv0[384] = { 0.0, 6.7281003023278441E-5,
     0.00026910590515966115, 0.0006054203904817812, 0.0010761339486859423,
     0.0016811198994508558, 0.0024202154265302034, 0.0032932216215704191,
@@ -1215,76 +1285,24 @@ void tf_psd_rescale_w384(const double X[768], float Y[384])
     6.7281003023278441E-5, 0.0 };
 
   double dv1[192];
-  int ixstart;
-  float mtmp;
-  int ix;
-  boolean_T exitg1;
-  float b_mtmp;
-  memset(&Y[0], 0, 384U * sizeof(float));
-  for (ch = 0; ch < 2; ch++) {
-    tf_welch_psd(*(double (*)[384])&X[384 * ch], 250.0, dv0, dv1);
-    for (ixstart = 0; ixstart < 192; ixstart++) {
-      Y[ch + (ixstart << 1)] = (float)dv1[ixstart];
-    }
-
-    //
-    ixstart = 1;
-    mtmp = Y[ch];
-    if (rtIsNaNF(Y[ch])) {
-      ix = 2;
-      exitg1 = false;
-      while ((!exitg1) && (ix < 193)) {
-        ixstart = ix;
-        if (!rtIsNaNF(Y[ch + ((ix - 1) << 1)])) {
-          mtmp = Y[ch + ((ix - 1) << 1)];
-          exitg1 = true;
-        } else {
-          ix++;
-        }
-      }
-    }
-
-    if (ixstart < 192) {
-      while (ixstart + 1 < 193) {
-        if (Y[ch + (ixstart << 1)] < mtmp) {
-          mtmp = Y[ch + (ixstart << 1)];
-        }
-
-        ixstart++;
-      }
-    }
-
-    ixstart = 1;
-    b_mtmp = Y[ch];
-    if (rtIsNaNF(Y[ch])) {
-      ix = 2;
-      exitg1 = false;
-      while ((!exitg1) && (ix < 193)) {
-        ixstart = ix;
-        if (!rtIsNaNF(Y[ch + ((ix - 1) << 1)])) {
-          b_mtmp = Y[ch + ((ix - 1) << 1)];
-          exitg1 = true;
-        } else {
-          ix++;
-        }
-      }
-    }
-
-    if (ixstart < 192) {
-      while (ixstart + 1 < 193) {
-        if (Y[ch + (ixstart << 1)] > b_mtmp) {
-          b_mtmp = Y[ch + (ixstart << 1)];
-        }
-
-        ixstart++;
-      }
-    }
-
-    b_mtmp -= mtmp;
-    for (ixstart = 0; ixstart < 192; ixstart++) {
-      Y[ch + (ixstart << 1)] = (Y[ch + (ixstart << 1)] - mtmp) / b_mtmp;
-    }
+  double dv2[192];
+  int i0;
+  tf_welch_psd(*(double (*)[384])&X[0], 250.0, dv0, dv1);
+  rescale_minmax(dv1, dv2);
+  for (i0 = 0; i0 < 192; i0++) {
+    Y[i0] = (float)dv2[i0];
   }
+
+  tf_welch_psd(*(double (*)[384])&X[384], 250.0, dv0, dv1);
+  rescale_minmax(dv1, dv2);
+  for (i0 = 0; i0 < 192; i0++) {
+    Y[192 + i0] = (float)dv2[i0];
+  }
+
+  //  for ch = 1:2
+  //     Y(ch,:) = tf_welch_psd(X(:,ch), 250, hannWin(384)); %
+  //     Y(ch,:) = rescale_minmax(Y(ch,:));
+  //  end
 }
 
 //

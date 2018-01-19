@@ -32,7 +32,7 @@ internal class GraphAdapter
         this.seriesHistoryDataPoints = seriesHistoryDataPoints
     }
 
-    fun addDataPointsGeneric(xdata: DoubleArray, ydata: DoubleArray, istart: Int, iend: Int) {
+    fun addDataPointsGeneric(xdata: DoubleArray, ydata: FloatArray, istart: Int, iend: Int) {
         if (this.plotData) {
             for (i in istart until iend) {
                 plot(xdata[i], ydata[i])
@@ -64,6 +64,10 @@ internal class GraphAdapter
                 this.series!!.removeFirst()
             }
         }
+    }
+
+    private fun plot(x: Double, y: Float) {
+        series!!.addLast(x, y)
     }
 
     private fun plot(x: Double, y: Double) {
