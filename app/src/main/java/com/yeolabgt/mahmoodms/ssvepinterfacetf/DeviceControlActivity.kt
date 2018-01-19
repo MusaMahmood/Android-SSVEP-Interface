@@ -126,12 +126,12 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                     ch2Doubles, 0, mTensorflowWindowSize)
             // TODO: it is easier to copy from each array into the larger array instead of doing this:
             val chConcat = Doubles.concat(ch1Doubles, ch2Doubles)
-            Log.i(TAG, "chConcat.size/2: "+chConcat.size/2)
-            val mSSVEPDataFeedTF = mNativeInterface.jTFPSDExtraction(chConcat, chConcat.size/2)
+            Log.i(TAG, "chConcat.size/2: " + chConcat.size / 2)
+            val mSSVEPDataFeedTF = mNativeInterface.jTFPSDExtraction(chConcat, chConcat.size / 2)
             // 1 - feed probabilities:
             Log.i(TAG, "onCharacteristicChanged: TF_PRECALL_TIME, N#" + mNumberOfClassifierCalls.toString())
             mTFInferenceInterface!!.feed("keep_prob", floatArrayOf(1f))
-            mTFInferenceInterface!!.feed(INPUT_DATA_FEED, mSSVEPDataFeedTF, 2, (chConcat.size/4).toLong())
+            mTFInferenceInterface!!.feed(INPUT_DATA_FEED, mSSVEPDataFeedTF, 2, (chConcat.size / 4).toLong())
             mTFInferenceInterface!!.run(mOutputScoresNames)
             mTFInferenceInterface!!.fetch(OUTPUT_DATA_FEED, outputScores)
             val yTF = DataChannel.getIndexOfLargest(outputScores)
@@ -270,7 +270,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         val customModel384 = customModelPath + "opt_ssvep_net_8ch_wlen_384_S1S2.pb"
         val customModel512 = customModelPath + "opt_ssvep_net_8ch_wlen_512_S1S2.pb"
         Log.d(TAG, "onCreate: customModel.exists: [256: " + File(customModel256).exists().toString() +
-        " 384: " + File(customModel384).exists().toString() + " 512: " + File(customModel512).exists().toString())
+                " 384: " + File(customModel384).exists().toString() + " 512: " + File(customModel512).exists().toString())
         val modelPath = when (integerValue) {
             1 -> customModel256
             2 -> customModel384
@@ -554,14 +554,24 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
              */
             val registerConfigBytes = Arrays.copyOf(ADS1299_DEFAULT_BYTE_CONFIG, ADS1299_DEFAULT_BYTE_CONFIG.size)
             when (PreferencesFragment.setSampleRate(context)) {
-                0 -> { registerConfigBytes[0] = 0x96.toByte() }
-                1 -> { registerConfigBytes[0] = 0x95.toByte() }
-                2 -> { registerConfigBytes[0] = 0x94.toByte() }
-                3 -> { registerConfigBytes[0] = 0x93.toByte() }
-                4 -> { registerConfigBytes[0] = 0x92.toByte() }
+                0 -> {
+                    registerConfigBytes[0] = 0x96.toByte()
+                }
+                1 -> {
+                    registerConfigBytes[0] = 0x95.toByte()
+                }
+                2 -> {
+                    registerConfigBytes[0] = 0x94.toByte()
+                }
+                3 -> {
+                    registerConfigBytes[0] = 0x93.toByte()
+                }
+                4 -> {
+                    registerConfigBytes[0] = 0x92.toByte()
+                }
             }
             val numChEnabled = PreferencesFragment.setNumberChannelsEnabled(context)
-            Log.e(TAG, "numChEnabled: "+numChEnabled.toString())
+            Log.e(TAG, "numChEnabled: " + numChEnabled.toString())
             // Set
             when (numChEnabled) {
                 1 -> {
@@ -585,7 +595,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             //Set all to disable.
             for (i in 4..7) registerConfigBytes[i] = 0xE1.toByte()
             Log.e(TAG, "SettingsNew0: " + DataChannel.byteArrayToHexString(registerConfigBytes))
-            for (i in 4..(3+numChEnabled)) {
+            for (i in 4..(3 + numChEnabled)) {
                 registerConfigBytes[i] = 0x00.toByte()
             }
             Log.e(TAG, "SettingsNew1: " + DataChannel.byteArrayToHexString(registerConfigBytes))
@@ -618,7 +628,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             mGraphAdapterCh2!!.plotData = !chSel
             if (longPSDA) {
                 fPSDStartIndex = 0
-                fPSDEndIndex = 249
+                fPSDEndIndex = 120
             } else {
                 fPSDStartIndex = 16
                 fPSDEndIndex = 44
@@ -631,9 +641,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     }
 
     private fun writeNewADS1299Settings(bytes: ByteArray) {
-        Log.e(TAG, "bytesOriginal: "+DataChannel.byteArrayToHexString(ADS1299_DEFAULT_BYTE_CONFIG))
+        Log.e(TAG, "bytesOriginal: " + DataChannel.byteArrayToHexString(ADS1299_DEFAULT_BYTE_CONFIG))
         if (mEEGConfigGattService != null) {
-            Log.e(TAG, "SendingCommand (byte): "+DataChannel.byteArrayToHexString(bytes))
+            Log.e(TAG, "SendingCommand (byte): " + DataChannel.byteArrayToHexString(bytes))
             mActBle!!.writeCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), bytes)
             //Should notify/update after writing
         }
@@ -1137,29 +1147,13 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
 
     private fun runPowerSpectrum() {
         val bufferLastIndex = (mCh1?.classificationBufferSize ?: 1000) - 1
-        val ch1 = Arrays.copyOfRange(mCh1?.classificationBuffer, bufferLastIndex-mWindowLength-1, bufferLastIndex-1)
-        val ch2 = Arrays.copyOfRange(mCh2?.classificationBuffer, bufferLastIndex-mWindowLength-1, bufferLastIndex-1)
+        val ch1 = Arrays.copyOfRange(mCh1?.classificationBuffer, bufferLastIndex - mWindowLength - 1, bufferLastIndex - 1)
+        val ch2 = Arrays.copyOfRange(mCh2?.classificationBuffer, bufferLastIndex - mWindowLength - 1, bufferLastIndex - 1)
         val concat = Doubles.concat(ch1, ch2)
         val extractedPSD = mNativeInterface.jTFPSDExtraction(concat, mWindowLength)
-        val psdCh1 = Arrays.copyOfRange(extractedPSD, 0, mWindowLength/2 - 1)
-        val psdCh2 = Arrays.copyOfRange(extractedPSD, mWindowLength/2, mWindowLength - 1)
+        val psdCh1 = Arrays.copyOfRange(extractedPSD, 0, mWindowLength / 2 - 1)
+        val psdCh2 = Arrays.copyOfRange(extractedPSD, mWindowLength / 2, mWindowLength - 1)
         powerSpectrumUpdateUI(psdCh1, psdCh2)
-        /*val getInstancePSD1 = DoubleArray(mSampleRate * 2)
-        val getInstancePSD2 = DoubleArray(mSampleRate * 2)
-        if(mCh1!!.classificationBuffer.size == 4 * mSampleRate) {
-            System.arraycopy(mCh1!!.classificationBuffer, mSampleRate * 2, getInstancePSD1, 0, mSampleRate * 2)
-            System.arraycopy(mCh2!!.classificationBuffer, mSampleRate * 2, getInstancePSD2, 0, mSampleRate * 2)
-            if (mSampleRate < 8000) {
-                combinedPSDArray = mNativeInterface.jPSDExtraction(getInstancePSD1, getInstancePSD2, mSampleRate, if (getInstancePSD1.size == getInstancePSD2.size) getInstancePSD1.size else 0) //250 Hz: For PSDA/each channel[0>mSampleRate|mSampleRate:end]
-                System.arraycopy(combinedPSDArray, 0, mPSDCh1!!, 0, mSampleRate)
-                System.arraycopy(combinedPSDArray, mSampleRate, mPSDCh2!!, 0, mSampleRate)
-            } else {
-                Arrays.fill(mPSDCh1!!, 0.0)
-                Arrays.fill(mPSDCh2!!, 0.0)
-            }
-        } else {
-            Log.e(TAG, "Classification Buffer Size: "+mCh1!!.classificationBuffer.size)
-        }*/
     }
 
     private fun powerSpectrumUpdateUI(mPSDCh1: FloatArray, mPSDCh2: FloatArray) {
@@ -1170,6 +1164,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             mFreqDomainPlotAdapter!!.setXyPlotDomainIncrement(6.0)
         else
             mFreqDomainPlotAdapter!!.setXyPlotDomainIncrement(2.0)
+        mGraphAdapterCh1PSDA?.series?.clear()
+        mGraphAdapterCh2PSDA?.series?.clear()
         mGraphAdapterCh1PSDA!!.addDataPointsGeneric(fPSD!!, mPSDCh1, fPSDStartIndex, fPSDEndIndex)
         mGraphAdapterCh2PSDA!!.addDataPointsGeneric(fPSD!!, mPSDCh2, fPSDStartIndex, fPSDEndIndex)
     }
@@ -1207,7 +1203,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), // LOFF_P/N (IGNORE)
                 0x0F.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()) //GPIO, MISC1 (0x20 for SRB1), MISC2, CONFIG4
 
-//        private val LABELS = arrayOf("Alpha", "15.15Hz", "16.67Hz", "18.51Hz", "20.00Hz")
+        //        private val LABELS = arrayOf("Alpha", "15.15Hz", "16.67Hz", "18.51Hz", "20.00Hz")
         //Directory:
         private val MODEL_FILENAME = "file:///android_asset/opt_ssvep_net.pb"
 

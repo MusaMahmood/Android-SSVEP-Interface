@@ -67,9 +67,6 @@ internal class GraphAdapter
     }
 
     private fun plot(x: Double, y: Float) {
-        while (series!!.size() > seriesHistoryDataPoints - 1) {
-            series!!.removeFirst()
-        }
         series!!.addLast(x, y)
     }
 
