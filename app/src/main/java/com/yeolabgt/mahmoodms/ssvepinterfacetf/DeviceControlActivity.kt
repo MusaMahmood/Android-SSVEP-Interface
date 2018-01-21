@@ -61,7 +61,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     private var mMSBFirst = false
     //Connecting to Multiple Devices
     private var deviceMacAddresses: Array<String>? = null
-    private var mLedWheelchairControlService: BluetoothGattService? = null
     private var mEEGConfigGattService: BluetoothGattService? = null
     private var mWheelchairGattIndex: Int = 0
     private var mEEGConfigGattIndex: Int = 0
@@ -234,10 +233,10 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             mGraphAdapterCh1!!.setSeriesHistoryDataPoints(250 * 5)
             mGraphAdapterCh2!!.setSeriesHistoryDataPoints(250 * 5)
             mGraphAdapterCh3?.setSeriesHistoryDataPoints(250 * 5)
-            val fileNameTimeStamped = "EEG_SSVEPData_" + timeStamp + "_" + mSampleRate.toString() + "Hz"
+            val fileNameTimeStamped = "EOG_VergenceData_" + timeStamp + "_" + mSampleRate.toString() + "Hz"
             Log.e(TAG, "fileTimeStamp: " + fileNameTimeStamped)
             try {
-                mPrimarySaveDataFile = SaveDataFile("/EEGData", fileNameTimeStamped,
+                mPrimarySaveDataFile = SaveDataFile("/EOGData", fileNameTimeStamped,
                         24, 1.toDouble() / mSampleRate)
             } catch (e: IOException) {
                 Log.e(TAG, "initializeBluetoothArray: IOException", e)
@@ -496,10 +495,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                     if (service.getCharacteristic(AppConstant.CHAR_SOFTWARE_REV) != null) {
                         mActBle!!.readCharacteristic(gatt, service.getCharacteristic(AppConstant.CHAR_SOFTWARE_REV))
                     }
-                }
-                if (AppConstant.SERVICE_WHEELCHAIR_CONTROL == service.uuid) {
-                    mLedWheelchairControlService = service
-                    Log.i(TAG, "BLE Wheelchair Control Service found")
                 }
 
                 if (AppConstant.SERVICE_EEG_SIGNAL == service.uuid) {
