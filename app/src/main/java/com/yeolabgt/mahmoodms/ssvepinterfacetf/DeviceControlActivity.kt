@@ -88,7 +88,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     //Data throughput counter
     private var mLastTime: Long = 0
     private var points = 0
-    private var mTensorflowWindowSize = 256
     private val mTimerHandler = Handler()
     private var mTimerEnabled = false
     //Data Variables:
@@ -103,6 +102,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     private var mTFRunModel = false
     private var mTFInferenceInterface: TensorFlowInferenceInterface? = null
     private var mOutputScoresNames: Array<String>? = null
+    private var mTensorflowWindowSize = 256
 
     private val timeStamp: String
         get() = SimpleDateFormat("yyyy.MM.dd_HH.mm.ss", Locale.US).format(Date())
@@ -572,38 +572,23 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             }
             val numChEnabled = PreferencesFragment.setNumberChannelsEnabled(context)
             Log.e(TAG, "numChEnabled: " + numChEnabled.toString())
-            // Set
-            when (numChEnabled) {
-                1 -> {
-                    registerConfigBytes[12] = 0b0000_0001
-                    registerConfigBytes[13] = 0b0000_0001
-                }
-                2 -> {
-                    registerConfigBytes[12] = 0b0000_0011
-                    registerConfigBytes[13] = 0b0000_0011
-                }
-                3 -> {
-                    registerConfigBytes[12] = 0b0000_0111
-                    registerConfigBytes[13] = 0b0000_0111
-                }
-                4 -> {
-                    registerConfigBytes[12] = 0b0000_1111
-                    registerConfigBytes[13] = 0b0000_1111
-                }
+            // Set BIAS Muxes:
+            if (PreferencesFragment.setSensP(context)) { //Sets Four LSBs to 1 if chEn
+                registerConfigBytes[12] = ((1 shl numChEnabled) - 1).toByte()
+            } else {
+                registerConfigBytes[12] = 0b0000_0000 // Turn off BIAS_SENSP
             }
-
+            if (PreferencesFragment.setSensN(context)) {
+                registerConfigBytes[13] = ((1 shl numChEnabled) - 1).toByte()
+            } else {
+                registerConfigBytes[13] = 0b0000_0000
+            }
             //Set all to disable.
             for (i in 4..7) registerConfigBytes[i] = 0xE1.toByte()
-            Log.e(TAG, "SettingsNew0: " + DataChannel.byteArrayToHexString(registerConfigBytes))
             for (i in 4..(3 + numChEnabled)) {
                 registerConfigBytes[i] = 0x00.toByte()
             }
-            Log.e(TAG, "SettingsNew1: " + DataChannel.byteArrayToHexString(registerConfigBytes))
             val gain12 = PreferencesFragment.setGainCh12(context) //Check if ch enabled first
-//            for (i in 4..5) {
-//                if ((registerConfigBytes[i] and 0x80.toByte())!=0x80.toByte())
-//                    registerConfigBytes[i] = registerConfigBytes[i] or (gain12 shl 4).toByte()
-//            }
             for (i in 4..5) { //Checks first bit enabled on chs 1 & 2.
                 registerConfigBytes[i] = when (registerConfigBytes[i] and 0x80.toByte()) {
                     0x80.toByte() -> registerConfigBytes[i] // do nothing if ch disabled
@@ -612,10 +597,10 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             }
             if (PreferencesFragment.setSRB1(context)) {
                 registerConfigBytes[20] = 0x20.toByte()
-                registerConfigBytes[13] = 0b0000_0000 // Turn off BIAS_SENSN with SRB 1
             } else {
                 registerConfigBytes[20] = 0x00.toByte()
             }
+
             Log.e(TAG, "SettingsNew: " + DataChannel.byteArrayToHexString(registerConfigBytes))
             writeNewADS1299Settings(registerConfigBytes)
             mGraphAdapterCh1PSDA!!.plotData = showPSDA

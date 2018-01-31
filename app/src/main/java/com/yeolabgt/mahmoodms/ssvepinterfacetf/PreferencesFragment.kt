@@ -75,5 +75,13 @@ class PreferencesFragment : PreferenceFragment() {
         fun setSRB1(context: Context): Boolean {
             return PreferenceManager.getDefaultSharedPreferences(context).getBoolean("switch_srb1", false)
         }
+
+        fun setSensP(context: Context): Boolean {
+            return PreferenceManager.getDefaultSharedPreferences(context).getBoolean("switch_biasp", true)
+        }
+
+        fun setSensN(context: Context): Boolean {
+            return PreferenceManager.getDefaultSharedPreferences(context).getBoolean("switch_biasn", true)
+        }
     }
 }

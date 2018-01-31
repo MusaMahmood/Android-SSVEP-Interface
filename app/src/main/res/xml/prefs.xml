@@ -29,6 +29,16 @@
             android:key="switch_srb1"
             android:title="SRB 1" />
 
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="switch_biasp"
+            android:title="BIAS_P" />
+
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="switch_biasn"
+            android:title="BIAS_N" />
+
     </PreferenceCategory>
 
     <PreferenceCategory android:title="UI Elements">
