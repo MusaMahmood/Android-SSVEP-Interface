@@ -1158,12 +1158,13 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     }
 
     companion object {
-        val HZ = "0 Hz"
+        internal const val HZ = "0 Hz"
         private val TAG = DeviceControlActivity::class.java.simpleName
         private var mGraphAdapterCh1PSDA: GraphAdapter? = null
         private var mGraphAdapterCh2PSDA: GraphAdapter? = null
         private var mFreqDomainPlotAdapter: XYPlotAdapter? = null
         var mRedrawer: Redrawer? = null
+        var mSSVEPClass = 0.0
         // Power Spectrum Graph Data:
         private var fPSD: DoubleArray? = null
         private var mWindowLength: Int = 512
@@ -1175,13 +1176,12 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         internal var mFilterData = false
         private var mPacketBuffer = 6
         //RSSI:
-        private val RSSI_UPDATE_TIME_INTERVAL = 2000
-        var mSSVEPClass = 0.0
+        private const val RSSI_UPDATE_TIME_INTERVAL = 2000
         //Save Data File
         private var mPrimarySaveDataFile: SaveDataFile? = null
         //Tensorflow CONSTANTS:
-        val INPUT_DATA_FEED = "input"
-        val OUTPUT_DATA_FEED = "output"
+        const val INPUT_DATA_FEED = "input"
+        const val OUTPUT_DATA_FEED = "output"
         val ADS1299_DEFAULT_BYTE_CONFIG = byteArrayOf(
                 0x96.toByte(), 0xD0.toByte(), 0xEC.toByte(), 0x00.toByte(), //CONFIG1-3, LOFF
                 0x40.toByte(), 0x40.toByte(), 0xE1.toByte(), 0xE1.toByte(), //CHSET 1-4
@@ -1190,9 +1190,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), // LOFF_P/N (IGNORE)
                 0x0F.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()) //GPIO, MISC1 (0x20 for SRB1), MISC2, CONFIG4
 
-        //        private val LABELS = arrayOf("Alpha", "15.15Hz", "16.67Hz", "18.51Hz", "20.00Hz")
         //Directory:
-        private val MODEL_FILENAME = "file:///android_asset/opt_ssvep_net.pb"
+        private const val MODEL_FILENAME = "file:///android_asset/opt_ssvep_net.pb"
 
         //Note for companion object: JNI call must include Companion in call: e.g. package_class_Companion_function(...).
         //TODO: Still does not work when I try to call from the companion object.
