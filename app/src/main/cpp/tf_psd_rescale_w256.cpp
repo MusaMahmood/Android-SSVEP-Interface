@@ -383,7 +383,7 @@ static void tf_welch_psd(const double signals[256], double fs, const double
   //  frequencies = (0:(windowsize/2-1))*fs/windowsize;
   // must be even, best if 2^n
   // ORIGINAL;
-  repmat(window, data_taper);
+  repmat(window, data_taper); //TODO: This step is completely pointless
 
   //  Data segmentation into blocks of size block_samples:
   // ORIGINAL
@@ -393,7 +393,7 @@ static void tf_welch_psd(const double signals[256], double fs, const double
 
   // Taper it
   for (i = 0; i < 256; i++) {
-    b_signals[i] = (signals[i] - a) * data_taper[i];
+    b_signals[i] = (signals[i] - a) * data_taper[i];//TODO: Use window[] not data_taper
   }
 
   fft(b_signals, Data_Block);
