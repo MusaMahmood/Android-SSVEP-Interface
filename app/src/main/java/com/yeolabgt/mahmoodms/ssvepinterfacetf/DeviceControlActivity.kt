@@ -554,6 +554,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
              */
             val registerConfigBytes = Arrays.copyOf(ADS1299_DEFAULT_BYTE_CONFIG, ADS1299_DEFAULT_BYTE_CONFIG.size)
             when (PreferencesFragment.setSampleRate(context)) {
+                // TODO: Change response to 6, 5, 4, 3, 2
+                // TODO: we can do rCB[0] = (0x90 + srateInt).toByte()
                 0 -> {
                     registerConfigBytes[0] = 0x96.toByte()
                 }
@@ -583,13 +585,15 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             } else {
                 registerConfigBytes[13] = 0b0000_0000
             }
-            //Set all to disable.
+            // Set all to disable.
             for (i in 4..7) registerConfigBytes[i] = 0xE1.toByte()
+            // Enable Selection
             for (i in 4..(3 + numChEnabled)) {
                 registerConfigBytes[i] = 0x00.toByte()
             }
-            val gain12 = PreferencesFragment.setGainCh12(context) //Check if ch enabled first
-            for (i in 4..5) { //Checks first bit enabled on chs 1 & 2.
+            val gain12 = PreferencesFragment.setGainCh12(context)
+            // Set gain for chs if enabled
+            for (i in 4..7) { //Checks first bit enabled on chs 1 & 2.
                 registerConfigBytes[i] = when (registerConfigBytes[i] and 0x80.toByte()) {
                     0x80.toByte() -> registerConfigBytes[i] // do nothing if ch disabled
                     else -> registerConfigBytes[i] or (gain12 shl 4).toByte() // Shift gain into 0xxx_0000 position
@@ -603,6 +607,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
 
             Log.e(TAG, "SettingsNew: " + DataChannel.byteArrayToHexString(registerConfigBytes))
             writeNewADS1299Settings(registerConfigBytes)
+
             mGraphAdapterCh1PSDA!!.plotData = showPSDA
             mGraphAdapterCh2PSDA!!.plotData = showPSDA
             mFreqDomainPlotAdapter!!.setXyPlotVisibility(showPSDA)
