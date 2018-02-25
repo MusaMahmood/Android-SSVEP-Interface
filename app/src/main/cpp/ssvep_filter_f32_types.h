@@ -5,7 +5,7 @@
 // File: ssvep_filter_f32_types.h
 //
 // MATLAB Coder version            : 3.3
-// C/C++ source code generated on  : 03-Nov-2017 18:02:47
+// C/C++ source code generated on  : 25-Feb-2018 09:44:24
 //
 #ifndef SSVEP_FILTER_F32_TYPES_H
 #define SSVEP_FILTER_F32_TYPES_H
