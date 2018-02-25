@@ -266,9 +266,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
 
     private fun enableTensorFlowModel(embeddedModel: File, integerValue: Int) {
         val customModelPath = Environment.getExternalStorageDirectory().absolutePath + "/Download/tensorflow_assets/"
-        val customModel256 = customModelPath + "opt_ssvep_net_8ch_wlen_256_S1S2.pb"
-        val customModel384 = customModelPath + "opt_ssvep_net_8ch_wlen_384_S1S2.pb"
-        val customModel512 = customModelPath + "opt_ssvep_net_8ch_wlen_512_S1S2.pb"
+        val customModel256 = customModelPath + "opt_ssvep_net_2ch_S9_psd_hpf3_wlen256.pb"
+        val customModel384 = customModelPath + "opt_ssvep_net_2ch_S9_psd_hpf3_wlen384.pb"
+        val customModel512 = customModelPath + "opt_ssvep_net_2ch_S9_psd_hpf3_wlen512.pb"
         Log.d(TAG, "onCreate: customModel.exists: [256: " + File(customModel256).exists().toString() +
                 " 384: " + File(customModel384).exists().toString() + " 512: " + File(customModel512).exists().toString())
         val modelPath = when (integerValue) {
