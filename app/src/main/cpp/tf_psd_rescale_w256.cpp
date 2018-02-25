@@ -5,7 +5,7 @@
 // File: tf_psd_rescale_w256.cpp
 //
 // MATLAB Coder version            : 3.3
-// C/C++ source code generated on  : 18-Jan-2018 19:50:27
+// C/C++ source code generated on  : 25-Feb-2018 08:53:42
 //
 
 // Include Files
@@ -14,6 +14,9 @@
 
 // Function Declarations
 static void fft(const double x[256], creal_T y[256]);
+static void filter(double b[4], double a[4], const double x[274], const double
+                   zi[3], double y[274]);
+static void filtfilt(const double x_in[256], double y_out[256]);
 static double mean(const double x[256]);
 static void power(const double a[256], double y[256]);
 static void repmat(const double a[256], double b[256]);
@@ -42,7 +45,7 @@ static void fft(const double x[256], creal_T y[256])
   int istart;
   int j;
   double twid_re;
-  static const double dv4[129] = { 1.0, 0.99969881869620425, 0.99879545620517241,
+  static const double dv8[129] = { 1.0, 0.99969881869620425, 0.99879545620517241,
     0.99729045667869021, 0.99518472667219693, 0.99247953459871,
     0.989176509964781, 0.98527764238894122, 0.98078528040323043,
     0.97570213003852857, 0.970031253194544, 0.96377606579543984,
@@ -87,7 +90,7 @@ static void fft(const double x[256], creal_T y[256])
     -0.99969881869620425, -1.0 };
 
   double twid_im;
-  static const double dv5[129] = { 0.0, -0.024541228522912288,
+  static const double dv9[129] = { 0.0, -0.024541228522912288,
     -0.049067674327418015, -0.073564563599667426, -0.0980171403295606,
     -0.1224106751992162, -0.14673047445536175, -0.17096188876030122,
     -0.19509032201612825, -0.2191012401568698, -0.24298017990326387,
@@ -177,8 +180,8 @@ static void fft(const double x[256], creal_T y[256])
 
     istart = 1;
     for (j = ju; j < 128; j += ju) {
-      twid_re = dv4[j];
-      twid_im = dv5[j];
+      twid_re = dv8[j];
+      twid_im = dv9[j];
       i = istart;
       ihi = istart + iheight;
       while (i < ihi) {
@@ -199,6 +202,134 @@ static void fft(const double x[256], creal_T y[256])
     ix += ix;
     iheight -= iy;
   }
+}
+
+//
+// Arguments    : double b[4]
+//                double a[4]
+//                const double x[274]
+//                const double zi[3]
+//                double y[274]
+// Return Type  : void
+//
+static void filter(double b[4], double a[4], const double x[274], const double
+                   zi[3], double y[274])
+{
+  double a1;
+  int k;
+  int naxpy;
+  int j;
+  a1 = a[0];
+  if ((!rtIsInf(a[0])) && (!rtIsNaN(a[0])) && (!(a[0] == 0.0)) && (a[0] != 1.0))
+  {
+    for (k = 0; k < 4; k++) {
+      b[k] /= a1;
+    }
+
+    for (k = 0; k < 3; k++) {
+      a[k + 1] /= a1;
+    }
+
+    a[0] = 1.0;
+  }
+
+  for (k = 0; k < 3; k++) {
+    y[k] = zi[k];
+  }
+
+  memset(&y[3], 0, 271U * sizeof(double));
+  for (k = 0; k < 274; k++) {
+    naxpy = 274 - k;
+    if (!(naxpy < 4)) {
+      naxpy = 4;
+    }
+
+    for (j = 0; j + 1 <= naxpy; j++) {
+      y[k + j] += x[k] * b[j];
+    }
+
+    naxpy = 273 - k;
+    if (!(naxpy < 3)) {
+      naxpy = 3;
+    }
+
+    a1 = -y[k];
+    for (j = 1; j <= naxpy; j++) {
+      y[k + j] += a1 * a[j];
+    }
+  }
+}
+
+//
+// Arguments    : const double x_in[256]
+//                double y_out[256]
+// Return Type  : void
+//
+static void filtfilt(const double x_in[256], double y_out[256])
+{
+  double xtmp;
+  double d0;
+  int i;
+  double y[274];
+  double dv3[4];
+  static const double dv4[4] = { 0.90431873448479, -2.71295620345437,
+    2.71295620345437, -0.90431873448479 };
+
+  double dv5[4];
+  static const double dv6[4] = { 1.0, -2.7990220146733, 2.61773550092223,
+    -0.81779236028278 };
+
+  double b_y[274];
+  double a[3];
+  static const double b_a[3] = { -0.90431873448438438, 1.80863746896885,
+    -0.90431873448445832 };
+
+  xtmp = 2.0 * x_in[0];
+  d0 = 2.0 * x_in[255];
+  for (i = 0; i < 9; i++) {
+    y[i] = xtmp - x_in[9 - i];
+  }
+
+  memcpy(&y[9], &x_in[0], sizeof(double) << 8);
+  for (i = 0; i < 9; i++) {
+    y[i + 265] = d0 - x_in[254 - i];
+  }
+
+  for (i = 0; i < 4; i++) {
+    dv3[i] = dv4[i];
+    dv5[i] = dv6[i];
+  }
+
+  for (i = 0; i < 3; i++) {
+    a[i] = b_a[i] * y[0];
+  }
+
+  memcpy(&b_y[0], &y[0], 274U * sizeof(double));
+  filter(dv3, dv5, b_y, a, y);
+  for (i = 0; i < 137; i++) {
+    xtmp = y[i];
+    y[i] = y[273 - i];
+    y[273 - i] = xtmp;
+  }
+
+  for (i = 0; i < 4; i++) {
+    dv3[i] = dv4[i];
+    dv5[i] = dv6[i];
+  }
+
+  for (i = 0; i < 3; i++) {
+    a[i] = b_a[i] * y[0];
+  }
+
+  memcpy(&b_y[0], &y[0], 274U * sizeof(double));
+  filter(dv3, dv5, b_y, a, y);
+  for (i = 0; i < 137; i++) {
+    xtmp = y[i];
+    y[i] = y[273 - i];
+    y[273 - i] = xtmp;
+  }
+
+  memcpy(&y_out[0], &y[9], sizeof(double) << 8);
 }
 
 //
@@ -345,7 +476,7 @@ static void tf_welch_psd(const double signals[256], double fs, const double
   int i;
   double b_signals[256];
   creal_T Data_Block[256];
-  double dv3[256];
+  double dv7[256];
 
   //  Function for spectra estimation by Welch's method
   //  Developed by Luiz A. Baccala, Fl?vio Caduda and Luciano Caldas, all from
@@ -383,7 +514,7 @@ static void tf_welch_psd(const double signals[256], double fs, const double
   //  frequencies = (0:(windowsize/2-1))*fs/windowsize;
   // must be even, best if 2^n
   // ORIGINAL;
-  repmat(window, data_taper); //TODO: This step is completely pointless
+  repmat(window, data_taper);
 
   //  Data segmentation into blocks of size block_samples:
   // ORIGINAL
@@ -393,7 +524,7 @@ static void tf_welch_psd(const double signals[256], double fs, const double
 
   // Taper it
   for (i = 0; i < 256; i++) {
-    b_signals[i] = (signals[i] - a) * data_taper[i];//TODO: Use window[] not data_taper
+    b_signals[i] = (signals[i] - a) * data_taper[i];
   }
 
   fft(b_signals, Data_Block);
@@ -412,8 +543,8 @@ static void tf_welch_psd(const double signals[256], double fs, const double
   //  IS FOR FAN RIG BEAMFORMING CODE
   //  P(:,c) = Data_Block(:,aa).*conj(Data_Block(:,b)); % THIS IS THE ORIGINAL LINE 
   //  Sum the spectrums up ...
-  power(window, dv3);
-  a = sum(dv3) * fs;
+  power(window, dv7);
+  a = sum(dv7) * fs;
 
   //  Average them out
   //  for a = 1:sensors
@@ -431,12 +562,13 @@ static void tf_welch_psd(const double signals[256], double fs, const double
 // tf_psd_rescale_w256 TF Preprocessing
 //  input should be X = (256, 2), or X = (512, 1);
 //  X = single(X);
-// Arguments    : const double X[512]
+// Arguments    : double X[512]
 //                float Y[256]
 // Return Type  : void
 //
-void tf_psd_rescale_w256(const double X[512], float Y[256])
+void tf_psd_rescale_w256(double X[512], float Y[256])
 {
+  double b_X[256];
   static const double dv0[256] = { 0.0, 0.00015177401106419852,
     0.00060700390285500783, 0.0013654133071059893, 0.0024265417964677849,
     0.0037897451640321322, 0.0054541958144270208, 0.0074188832662467341,
@@ -527,6 +659,13 @@ void tf_psd_rescale_w256(const double X[512], float Y[256])
   double dv1[128];
   double dv2[128];
   int i0;
+
+  //  WAS 2, 128
+  //  High Pass Filter at 4Hz:
+  memcpy(&b_X[0], &X[0], sizeof(double) << 8);
+  filtfilt(b_X, *(double (*)[256])&X[0]);
+  memcpy(&b_X[0], &X[256], sizeof(double) << 8);
+  filtfilt(b_X, *(double (*)[256])&X[256]);
   tf_welch_psd(*(double (*)[256])&X[0], 250.0, dv0, dv1);
   rescale_minmax(dv1, dv2);
   for (i0 = 0; i0 < 128; i0++) {

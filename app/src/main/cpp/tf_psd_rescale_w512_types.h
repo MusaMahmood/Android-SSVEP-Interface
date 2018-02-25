@@ -5,7 +5,7 @@
 // File: tf_psd_rescale_w512_types.h
 //
 // MATLAB Coder version            : 3.3
-// C/C++ source code generated on  : 11-Jan-2018 11:22:43
+// C/C++ source code generated on  : 25-Feb-2018 09:04:49
 //
 #ifndef TF_PSD_RESCALE_W512_TYPES_H
 #define TF_PSD_RESCALE_W512_TYPES_H

@@ -5,7 +5,7 @@
 // File: tf_psd_rescale_w512.cpp
 //
 // MATLAB Coder version            : 3.3
-// C/C++ source code generated on  : 18-Jan-2018 19:47:33
+// C/C++ source code generated on  : 25-Feb-2018 09:04:49
 //
 
 // Include Files
@@ -14,6 +14,10 @@
 
 // Function Declarations
 static void fft(const double x[512], creal_T y[512]);
+static void filter(double b[4], double a[4], const double x[530], const double
+                   zi[3], double y[530]);
+static void filtfilt(const double x_in[512], double y_out[512]);
+static void flipud(double x[530]);
 static double mean(const double x[512]);
 static void power(const double a[512], double y[512]);
 static void repmat(const double a[512], double b[512]);
@@ -42,7 +46,7 @@ static void fft(const double x[512], creal_T y[512])
   int istart;
   int j;
   double twid_re;
-  static const double dv4[257] = { 1.0, 0.9999247018391445, 0.99969881869620425,
+  static const double dv8[257] = { 1.0, 0.9999247018391445, 0.99969881869620425,
     0.99932238458834954, 0.99879545620517241, 0.99811811290014918,
     0.99729045667869021, 0.996312612182778, 0.99518472667219693,
     0.99390697000235606, 0.99247953459871, 0.99090263542778, 0.989176509964781,
@@ -129,7 +133,7 @@ static void fft(const double x[512], creal_T y[512])
     -0.99969881869620425, -0.9999247018391445, -1.0 };
 
   double twid_im;
-  static const double dv5[257] = { 0.0, -0.012271538285719925,
+  static const double dv9[257] = { 0.0, -0.012271538285719925,
     -0.024541228522912288, -0.036807222941358832, -0.049067674327418015,
     -0.061320736302208578, -0.073564563599667426, -0.0857973123444399,
     -0.0980171403295606, -0.11022220729388306, -0.1224106751992162,
@@ -262,8 +266,8 @@ static void fft(const double x[512], creal_T y[512])
 
     istart = 1;
     for (j = ju; j < 256; j += ju) {
-      twid_re = dv4[j];
-      twid_im = dv5[j];
+      twid_re = dv8[j];
+      twid_im = dv9[j];
       i = istart;
       ihi = istart + iheight;
       while (i < ihi) {
@@ -283,6 +287,139 @@ static void fft(const double x[512], creal_T y[512])
     iy = ix;
     ix += ix;
     iheight -= iy;
+  }
+}
+
+//
+// Arguments    : double b[4]
+//                double a[4]
+//                const double x[530]
+//                const double zi[3]
+//                double y[530]
+// Return Type  : void
+//
+static void filter(double b[4], double a[4], const double x[530], const double
+                   zi[3], double y[530])
+{
+  double a1;
+  int k;
+  int naxpy;
+  int j;
+  a1 = a[0];
+  if ((!rtIsInf(a[0])) && (!rtIsNaN(a[0])) && (!(a[0] == 0.0)) && (a[0] != 1.0))
+  {
+    for (k = 0; k < 4; k++) {
+      b[k] /= a1;
+    }
+
+    for (k = 0; k < 3; k++) {
+      a[k + 1] /= a1;
+    }
+
+    a[0] = 1.0;
+  }
+
+  for (k = 0; k < 3; k++) {
+    y[k] = zi[k];
+  }
+
+  memset(&y[3], 0, 527U * sizeof(double));
+  for (k = 0; k < 530; k++) {
+    naxpy = 530 - k;
+    if (!(naxpy < 4)) {
+      naxpy = 4;
+    }
+
+    for (j = 0; j + 1 <= naxpy; j++) {
+      y[k + j] += x[k] * b[j];
+    }
+
+    naxpy = 529 - k;
+    if (!(naxpy < 3)) {
+      naxpy = 3;
+    }
+
+    a1 = -y[k];
+    for (j = 1; j <= naxpy; j++) {
+      y[k + j] += a1 * a[j];
+    }
+  }
+}
+
+//
+// Arguments    : const double x_in[512]
+//                double y_out[512]
+// Return Type  : void
+//
+static void filtfilt(const double x_in[512], double y_out[512])
+{
+  double d0;
+  double d1;
+  int i;
+  double y[530];
+  double dv3[4];
+  static const double dv4[4] = { 0.90431873448479, -2.71295620345437,
+    2.71295620345437, -0.90431873448479 };
+
+  double dv5[4];
+  static const double dv6[4] = { 1.0, -2.7990220146733, 2.61773550092223,
+    -0.81779236028278 };
+
+  double b_y[530];
+  double a[3];
+  static const double b_a[3] = { -0.90431873448438438, 1.80863746896885,
+    -0.90431873448445832 };
+
+  d0 = 2.0 * x_in[0];
+  d1 = 2.0 * x_in[511];
+  for (i = 0; i < 9; i++) {
+    y[i] = d0 - x_in[9 - i];
+  }
+
+  memcpy(&y[9], &x_in[0], sizeof(double) << 9);
+  for (i = 0; i < 9; i++) {
+    y[i + 521] = d1 - x_in[510 - i];
+  }
+
+  for (i = 0; i < 4; i++) {
+    dv3[i] = dv4[i];
+    dv5[i] = dv6[i];
+  }
+
+  for (i = 0; i < 3; i++) {
+    a[i] = b_a[i] * y[0];
+  }
+
+  memcpy(&b_y[0], &y[0], 530U * sizeof(double));
+  filter(dv3, dv5, b_y, a, y);
+  flipud(y);
+  for (i = 0; i < 4; i++) {
+    dv3[i] = dv4[i];
+    dv5[i] = dv6[i];
+  }
+
+  for (i = 0; i < 3; i++) {
+    a[i] = b_a[i] * y[0];
+  }
+
+  memcpy(&b_y[0], &y[0], 530U * sizeof(double));
+  filter(dv3, dv5, b_y, a, y);
+  flipud(y);
+  memcpy(&y_out[0], &y[9], sizeof(double) << 9);
+}
+
+//
+// Arguments    : double x[530]
+// Return Type  : void
+//
+static void flipud(double x[530])
+{
+  int i;
+  double xtmp;
+  for (i = 0; i < 265; i++) {
+    xtmp = x[i];
+    x[i] = x[529 - i];
+    x[529 - i] = xtmp;
   }
 }
 
@@ -430,7 +567,7 @@ static void tf_welch_psd(const double signals[512], double fs, const double
   int i;
   double b_signals[512];
   creal_T Data_Block[512];
-  double dv3[512];
+  double dv7[512];
 
   //  Function for spectra estimation by Welch's method
   //  Developed by Luiz A. Baccala, Fl?vio Caduda and Luciano Caldas, all from
@@ -497,8 +634,8 @@ static void tf_welch_psd(const double signals[512], double fs, const double
   //  IS FOR FAN RIG BEAMFORMING CODE
   //  P(:,c) = Data_Block(:,aa).*conj(Data_Block(:,b)); % THIS IS THE ORIGINAL LINE 
   //  Sum the spectrums up ...
-  power(window, dv3);
-  a = sum(dv3) * fs;
+  power(window, dv7);
+  a = sum(dv7) * fs;
 
   //  Average them out
   //  for a = 1:sensors
@@ -517,12 +654,13 @@ static void tf_welch_psd(const double signals[512], double fs, const double
 //  input should be X = (512, 2), or X = (1024, 1);
 //  Output is Y = (2, 256) float32
 //  X = single(X);
-// Arguments    : const double X[1024]
+// Arguments    : double X[1024]
 //                float Y[512]
 // Return Type  : void
 //
-void tf_psd_rescale_w512(const double X[1024], float Y[512])
+void tf_psd_rescale_w512(double X[1024], float Y[512])
 {
+  double b_X[512];
   static const double dv0[512] = { 0.0, 3.7796577274096244E-5,
     0.00015118059477142731, 0.00034013491038087373, 0.00060463095679685885,
     0.00094462874583833845, 0.0013600768744944647, 0.0018509125326960918,
@@ -700,6 +838,11 @@ void tf_psd_rescale_w512(const double X[1024], float Y[512])
   int i0;
 
   //  Y = single(zeros(2, 256));
+  //  High Pass Filter at 4Hz:
+  memcpy(&b_X[0], &X[0], sizeof(double) << 9);
+  filtfilt(b_X, *(double (*)[512])&X[0]);
+  memcpy(&b_X[0], &X[512], sizeof(double) << 9);
+  filtfilt(b_X, *(double (*)[512])&X[512]);
   tf_welch_psd(*(double (*)[512])&X[0], 250.0, dv0, dv1);
   rescale_minmax(dv1, dv2);
   for (i0 = 0; i0 < 256; i0++) {

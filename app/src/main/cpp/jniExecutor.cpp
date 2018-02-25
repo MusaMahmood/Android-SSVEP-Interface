@@ -114,7 +114,6 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jmainInitializ
         JNIEnv *env, jobject obj, jboolean terminate) {
     if (!(bool) terminate) {
         classifySSVEP_initialize(); //Only need to call once.
-//        extractPowerSpectrum_initialize();
         return 0;
     } else {
         return -1;

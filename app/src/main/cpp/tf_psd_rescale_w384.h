@@ -5,7 +5,7 @@
 // File: tf_psd_rescale_w384.h
 //
 // MATLAB Coder version            : 3.3
-// C/C++ source code generated on  : 11-Jan-2018 11:16:40
+// C/C++ source code generated on  : 25-Feb-2018 09:01:35
 //
 #ifndef TF_PSD_RESCALE_W384_H
 #define TF_PSD_RESCALE_W384_H
@@ -20,7 +20,7 @@
 #include "tf_psd_rescale_w384_types.h"
 
 // Function Declarations
-extern void tf_psd_rescale_w384(const double X[768], float Y[384]);
+extern void tf_psd_rescale_w384(double X[768], float Y[384]);
 extern void tf_psd_rescale_w384_initialize();
 extern void tf_psd_rescale_w384_terminate();
 

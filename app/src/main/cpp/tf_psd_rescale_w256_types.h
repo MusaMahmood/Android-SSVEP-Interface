@@ -5,7 +5,7 @@
 // File: tf_psd_rescale_w256_types.h
 //
 // MATLAB Coder version            : 3.3
-// C/C++ source code generated on  : 10-Jan-2018 11:12:05
+// C/C++ source code generated on  : 25-Feb-2018 08:53:42
 //
 #ifndef TF_PSD_RESCALE_W256_TYPES_H
 #define TF_PSD_RESCALE_W256_TYPES_H

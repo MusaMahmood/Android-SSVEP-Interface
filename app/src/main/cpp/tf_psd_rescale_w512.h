@@ -5,7 +5,7 @@
 // File: tf_psd_rescale_w512.h
 //
 // MATLAB Coder version            : 3.3
-// C/C++ source code generated on  : 11-Jan-2018 11:22:43
+// C/C++ source code generated on  : 25-Feb-2018 09:04:49
 //
 #ifndef TF_PSD_RESCALE_W512_H
 #define TF_PSD_RESCALE_W512_H
@@ -19,7 +19,7 @@
 #include "tf_psd_rescale_w512_types.h"
 
 // Function Declarations
-extern void tf_psd_rescale_w512(const double X[1024], float Y[512]);
+extern void tf_psd_rescale_w512(double X[1024], float Y[512]);
 extern void tf_psd_rescale_w512_initialize();
 extern void tf_psd_rescale_w512_terminate();
 

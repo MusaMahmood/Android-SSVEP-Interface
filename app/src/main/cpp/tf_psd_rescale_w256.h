@@ -5,7 +5,7 @@
 // File: tf_psd_rescale_w256.h
 //
 // MATLAB Coder version            : 3.3
-// C/C++ source code generated on  : 10-Jan-2018 11:12:05
+// C/C++ source code generated on  : 25-Feb-2018 08:53:42
 //
 #ifndef TF_PSD_RESCALE_W256_H
 #define TF_PSD_RESCALE_W256_H
@@ -19,7 +19,7 @@
 #include "tf_psd_rescale_w256_types.h"
 
 // Function Declarations
-extern void tf_psd_rescale_w256(const double X[512], float Y[256]);
+extern void tf_psd_rescale_w256(double X[512], float Y[256]);
 extern void tf_psd_rescale_w256_initialize();
 extern void tf_psd_rescale_w256_terminate();
 
