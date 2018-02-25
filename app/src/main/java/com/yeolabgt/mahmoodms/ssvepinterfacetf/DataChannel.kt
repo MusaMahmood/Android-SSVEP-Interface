@@ -60,6 +60,11 @@ internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classifi
         }
     }
 
+    fun resetBuffers() {
+        this.dataBuffer = null
+        this.packetCounter = 0.toShort()
+    }
+
     companion object {
         private val HEX_CHARS = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
                                         'A', 'B', 'C', 'D', 'E', 'F')

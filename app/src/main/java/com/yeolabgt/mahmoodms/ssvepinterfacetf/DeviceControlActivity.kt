@@ -221,6 +221,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             executeWheelchairCommand(0)
             changeUIElementVisibility(b)
             mFilterData = b
+            mPacketBuffer = if (b) { 9 } else { 1 }
+            mCh1?.resetBuffers()
+            mCh2?.resetBuffers()
         }
         mChannelSelect = findViewById(R.id.toggleButtonCh1)
         mChannelSelect!!.setOnCheckedChangeListener { _, b ->
@@ -848,7 +851,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     }
 
     private fun addToGraphBuffer(dataChannel: DataChannel, graphAdapter: GraphAdapter?, updateTrainingRoutine: Boolean) {
-        if (mFilterData && dataChannel.totalDataPointsReceived > 1000) {
+        Log.e(TAG, "dataChannel.dataBuffer!!.size: " + dataChannel.dataBuffer?.size)
+        if (mFilterData && dataChannel.totalDataPointsReceived > 250) {
             val filteredData = mNativeInterface.jSSVEPCfilter(dataChannel.classificationBuffer)
             graphAdapter!!.clearPlot()
 
@@ -888,8 +892,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             }
         }
 
-        dataChannel.dataBuffer = null
-        dataChannel.packetCounter = 0.toShort()
+        dataChannel.resetBuffers()
     }
 
     private val mPowerSpectrumRunnableThread = Runnable {
@@ -1179,7 +1182,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         private var mSampleRate = 250
         //Data Channel Classes
         internal var mFilterData = false
-        private var mPacketBuffer = 6
+        private var mPacketBuffer = 2
         //RSSI:
         private const val RSSI_UPDATE_TIME_INTERVAL = 2000
         //Save Data File
