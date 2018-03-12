@@ -9,6 +9,9 @@
 #include "tf_psd_rescale_w256.h"
 #include "tf_psd_rescale_w384.h"
 #include "tf_psd_rescale_w512.h"
+#include "tf_csm_welch_w128.h"
+#include "tf_csm_welch_w256.h"
+#include "tf_csm_welch_w512.h"
 
 /*Additional Includes*/
 #include <jni.h>
@@ -46,6 +49,32 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jClassifySSVEP
     classifySSVEP(X1, X2, threshold, &Y[0], &PSD[0]);
     jdoubleArray m_result = env->NewDoubleArray(2);
     env->SetDoubleArrayRegion(m_result, 0, 2, Y);
+    return m_result;
+}
+}
+
+extern "C" {
+JNIEXPORT jfloatArray JNICALL
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jTFCSMExtraction(
+        JNIEnv *env, jobject jobject1, jdoubleArray ch1_2_data, jint length) {
+    jdouble *X = env->GetDoubleArrayElements(ch1_2_data, NULL); if (X == NULL) LOGE("ERROR - C_ARRAY IS NULL");
+    jfloatArray m_result = env->NewFloatArray(length);
+     //length/2*2=Divide by two for normal length, but we are looking at 2 vectors.
+    int output_length = 0;
+    if (length == 128 || length == 256) {
+        output_length = 192; // 3 * 128(psd_wlen)/2
+    } else if (length == 512) {
+        output_length = 384; // 3 * 256/2
+    }
+    float Y[output_length]; // Set Y Length
+    if (length == 128) {
+        tf_csm_welch_w128(X, Y);
+    } else if (length == 256) {
+        tf_csm_welch_w256(X, Y);
+    } else if (length == 512) {
+        tf_csm_welch_w512(X, Y);
+    }
+    env->SetFloatArrayRegion(m_result, 0, output_length, Y);
     return m_result;
 }
 }

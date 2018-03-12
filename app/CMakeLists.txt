@@ -35,6 +35,10 @@ add_library( # Sets the name of the library.
                 src/main/cpp/tf_psd_rescale_w384.cpp
                 src/main/cpp/tf_psd_rescale_w512.cpp
 
+                src/main/cpp/tf_csm_welch_w128.cpp
+                src/main/cpp/tf_csm_welch_w256.cpp
+                src/main/cpp/tf_csm_welch_w512.cpp
+
                 # Executor
                 src/main/cpp/jniExecutor.cpp
 
