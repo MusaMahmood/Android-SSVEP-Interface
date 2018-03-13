@@ -102,7 +102,10 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     private var mTFRunModel = false
     private var mTFInferenceInterface: TensorFlowInferenceInterface? = null
     private var mOutputScoresNames: Array<String>? = null
+    private var mTensorflowSolutionIndex = 0
     private var mTensorflowWindowSize = 256
+    private var mTensorflowXDim = 2 // x-dimension
+    private var mTensorflowYDim = 128 // y-dimension
 
     private val timeStamp: String
         get() = SimpleDateFormat("yyyy.MM.dd_HH.mm.ss", Locale.US).format(Date())
@@ -127,11 +130,17 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             // TODO: it is easier to copy from each array into the larger array instead of doing this:
             val chConcat = Doubles.concat(ch1Doubles, ch2Doubles)
             Log.i(TAG, "chConcat.size/2: " + chConcat.size / 2)
-            val mSSVEPDataFeedTF = mNativeInterface.jTFPSDExtraction(chConcat, chConcat.size / 2)
+
+            var mSSVEPDataFeedTF = FloatArray(mTensorflowXDim * mTensorflowYDim)
+            if (mTensorflowSolutionIndex in 1..3) {
+                mSSVEPDataFeedTF = mNativeInterface.jTFPSDExtraction(chConcat, mTensorflowWindowSize)
+            } else if (mTensorflowSolutionIndex in 4..6) {
+                mSSVEPDataFeedTF = mNativeInterface.jTFCSMExtraction(chConcat, mTensorflowWindowSize)
+            }
             // 1 - feed probabilities:
             Log.i(TAG, "onCharacteristicChanged: TF_PRECALL_TIME, N#" + mNumberOfClassifierCalls.toString())
             mTFInferenceInterface!!.feed("keep_prob", floatArrayOf(1f))
-            mTFInferenceInterface!!.feed(INPUT_DATA_FEED, mSSVEPDataFeedTF, 2, (chConcat.size / 4).toLong())
+            mTFInferenceInterface!!.feed(INPUT_DATA_FEED, mSSVEPDataFeedTF, mTensorflowXDim.toLong(), mTensorflowYDim.toLong())
             mTFInferenceInterface!!.run(mOutputScoresNames)
             mTFInferenceInterface!!.fetch(OUTPUT_DATA_FEED, outputScores)
             val yTF = DataChannel.getIndexOfLargest(outputScores)
@@ -221,7 +230,11 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             executeWheelchairCommand(0)
             changeUIElementVisibility(b)
             mFilterData = b
-            mPacketBuffer = if (b) { 9 } else { 1 }
+            mPacketBuffer = if (b) {
+                9
+            } else {
+                1
+            }
             mCh1?.resetBuffers()
             mCh2?.resetBuffers()
         }
@@ -268,27 +281,42 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     }
 
     private fun enableTensorFlowModel(embeddedModel: File, integerValue: Int) {
+        mTensorflowSolutionIndex = integerValue
         val customModelPath = Environment.getExternalStorageDirectory().absolutePath + "/Download/tensorflow_assets/"
-        val customModel256 = customModelPath + "opt_ssvep_net_2ch_S9_psd_hpf3_wlen256.pb"
-        val customModel384 = customModelPath + "opt_ssvep_net_2ch_S9_psd_hpf3_wlen384.pb"
-        val customModel512 = customModelPath + "opt_ssvep_net_2ch_S9_psd_hpf3_wlen512.pb"
-        Log.d(TAG, "onCreate: customModel.exists: [256: " + File(customModel256).exists().toString() +
-                " 384: " + File(customModel384).exists().toString() + " 512: " + File(customModel512).exists().toString())
-        val modelPath = when (integerValue) {
-            1 -> customModel256
-            2 -> customModel384
-            3 -> customModel512
-            else -> ""
+        // Hard-coded Strings of Model Names
+        // NOTE: Zero index is an empty string (no model)
+        val customModel = arrayOf("", "opt_ssvep_net_2ch_S9_psd_hpf3_wlen256",
+                "opt_ssvep_net_2ch_S9_psd_hpf3_wlen384", "opt_ssvep_net_2ch_S9_psd_hpf3_wlen512",
+                "opt_ssvep_net_2ch_S99_csm_welch_p128_wlen128", "opt_ssvep_net_2ch_S99_csm_welch_p128_wlen256",
+                "opt_ssvep_net_2ch_S99_csm_welch_p256_wlen512")
+
+        val tensorflowModelLocation = customModelPath + customModel[integerValue] + ".pb"
+        for (s in customModel) {
+            val tempPath = customModelPath + s + ".pb"
+            Log.e(TAG, "Model " + tempPath + " exists? " + File(tempPath).exists().toString())
         }
         mTensorflowWindowSize = when (integerValue) {
-            1 -> 256
+            1, 5 -> 256
             2 -> 384
-            3 -> 512
+            3, 6 -> 512
+            4 -> 128
             else -> 256
         }
+        mTensorflowXDim = when (integerValue) {
+            1, 2, 3 -> 2
+            4, 5, 6 -> 3
+            else -> 2
+        }
+        mTensorflowYDim = when (integerValue) {
+            1, 2, 3 -> mTensorflowWindowSize / 2
+            4, 5 -> 64
+            6 -> 128
+            else -> 128
+        }
+        Log.e(TAG, "Input Length: 2x" + mTensorflowWindowSize + " Output = " + mTensorflowXDim + "x" + mTensorflowYDim)
         when {
-            File(modelPath).exists() -> {
-                mTFInferenceInterface = TensorFlowInferenceInterface(assets, modelPath)
+            File(tensorflowModelLocation).exists() -> {
+                mTFInferenceInterface = TensorFlowInferenceInterface(assets, tensorflowModelLocation)
                 //Reset counter:
                 mNumberOfClassifierCalls = 1
                 mTFRunModel = true
@@ -557,8 +585,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
              */
             val registerConfigBytes = Arrays.copyOf(ADS1299_DEFAULT_BYTE_CONFIG, ADS1299_DEFAULT_BYTE_CONFIG.size)
             when (PreferencesFragment.setSampleRate(context)) {
-                // TODO: Change response to 6, 5, 4, 3, 2
-                // TODO: we can do rCB[0] = (0x90 + srateInt).toByte()
+            // TODO: Change response to 6, 5, 4, 3, 2
+            // TODO: we can do rCB[0] = (0x90 + srateInt).toByte()
                 0 -> {
                     registerConfigBytes[0] = 0x96.toByte()
                 }
@@ -621,7 +649,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             mGraphAdapterCh2!!.plotData = !chSel
             if (longPSDA) {
                 fPSDStartIndex = 0
-                fPSDEndIndex = 120
+                fPSDEndIndex = 255//120 == ~56Hz
             } else {
                 fPSDStartIndex = 16
                 fPSDEndIndex = 44
@@ -851,7 +879,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     }
 
     private fun addToGraphBuffer(dataChannel: DataChannel, graphAdapter: GraphAdapter?, updateTrainingRoutine: Boolean) {
-        Log.e(TAG, "dataChannel.dataBuffer!!.size: " + dataChannel.dataBuffer?.size)
+//        Log.e(TAG, "dataChannel.dataBuffer!!.size: " + dataChannel.dataBuffer?.size)
         if (mFilterData && dataChannel.totalDataPointsReceived > 250) {
             val filteredData = mNativeInterface.jSSVEPCfilter(dataChannel.classificationBuffer)
             graphAdapter!!.clearPlot()

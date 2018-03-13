@@ -58,7 +58,6 @@ JNIEXPORT jfloatArray JNICALL
 Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jTFCSMExtraction(
         JNIEnv *env, jobject jobject1, jdoubleArray ch1_2_data, jint length) {
     jdouble *X = env->GetDoubleArrayElements(ch1_2_data, NULL); if (X == NULL) LOGE("ERROR - C_ARRAY IS NULL");
-    jfloatArray m_result = env->NewFloatArray(length);
      //length/2*2=Divide by two for normal length, but we are looking at 2 vectors.
     int output_length = 0;
     if (length == 128 || length == 256) {
@@ -66,6 +65,7 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jTFCSMExtracti
     } else if (length == 512) {
         output_length = 384; // 3 * 256/2
     }
+    jfloatArray m_result = env->NewFloatArray(output_length);
     float Y[output_length]; // Set Y Length
     if (length == 128) {
         tf_csm_welch_w128(X, Y);
