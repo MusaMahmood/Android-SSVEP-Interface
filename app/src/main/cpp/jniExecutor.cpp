@@ -12,6 +12,7 @@
 #include "tf_csm_welch_w128.h"
 #include "tf_csm_welch_w256.h"
 #include "tf_csm_welch_w512.h"
+#include "tf_timedomain_preprocess.h"
 
 /*Additional Includes*/
 #include <jni.h>
@@ -49,6 +50,24 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jClassifySSVEP
     classifySSVEP(X1, X2, threshold, &Y[0], &PSD[0]);
     jdoubleArray m_result = env->NewDoubleArray(2);
     env->SetDoubleArrayRegion(m_result, 0, 2, Y);
+    return m_result;
+}
+}
+
+extern "C" {
+JNIEXPORT jfloatArray JNICALL
+Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jtimeDomainPreprocessing(
+        JNIEnv *env, jobject jobject1, jdoubleArray x_array, jint length) {
+    jdouble *X = env->GetDoubleArrayElements(x_array, NULL); if (X == NULL) LOGE("ERROR - C_ARRAY IS NULL");
+    //length/2*2=Divide by two for normal length, but we are looking at 2 vectors.
+    jfloatArray m_result = env->NewFloatArray(length);
+    float Y[length]; // Set Y Length
+    int y_size[2];
+    int x_size[] = {length}; //sizeof 1
+    if (length == 128 || length == 256 || length == 512) {
+        tf_timedomain_preprocess(X, x_size, Y, y_size);
+    }
+    env->SetFloatArrayRegion(m_result, 0, length, Y);
     return m_result;
 }
 }

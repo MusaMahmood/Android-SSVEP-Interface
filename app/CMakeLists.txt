@@ -31,6 +31,9 @@ add_library( # Sets the name of the library.
                 src/main/cpp/extractPowerSpectrum_emxutil.cpp
                 src/main/cpp/classifySSVEP.cpp
                 src/main/cpp/ssvep_filter_f32.cpp
+
+                src/main/cpp/tf_timedomain_preprocess.cpp
+
                 src/main/cpp/tf_psd_rescale_w256.cpp
                 src/main/cpp/tf_psd_rescale_w384.cpp
                 src/main/cpp/tf_psd_rescale_w512.cpp

@@ -29,6 +29,7 @@ import android.widget.*
 
 import com.androidplot.util.Redrawer
 import com.google.common.primitives.Doubles
+import com.google.common.primitives.Floats
 import com.yeolabgt.mahmoodms.actblelibrary.ActBle
 import kotlinx.android.synthetic.main.activity_device_control.*
 
@@ -116,6 +117,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     private val mClassifyThread = Runnable {
         val y: DoubleArray
         if (mTFRunModel) {
+            // Log time before preprocessing
+            Log.i(TAG, "onCharacteristicChanged: TF_PRECALL_TIME, N#" + mNumberOfClassifierCalls.toString())
             //Run TF Model: SEE ORIGINAL .py SCRIPT TO VERIFY CORRECT INPUTS!
             val outputScores = FloatArray(5)//5 is number of classes/labels
             // Extract features from last wlen=256 datapoints:
@@ -136,9 +139,13 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                 mSSVEPDataFeedTF = mNativeInterface.jTFPSDExtraction(chConcat, mTensorflowWindowSize)
             } else if (mTensorflowSolutionIndex in 4..6) {
                 mSSVEPDataFeedTF = mNativeInterface.jTFCSMExtraction(chConcat, mTensorflowWindowSize)
+            } else if (mTensorflowSolutionIndex in 7..9) {
+                val ch1 = mNativeInterface.jtimeDomainPreprocessing(ch1Doubles, mTensorflowWindowSize)
+                val ch2 = mNativeInterface.jtimeDomainPreprocessing(ch2Doubles, mTensorflowWindowSize)
+                mSSVEPDataFeedTF = Floats.concat(ch1, ch2)
             }
             // 1 - feed probabilities:
-            Log.i(TAG, "onCharacteristicChanged: TF_PRECALL_TIME, N#" + mNumberOfClassifierCalls.toString())
+
             mTFInferenceInterface!!.feed("keep_prob", floatArrayOf(1f))
             mTFInferenceInterface!!.feed(INPUT_DATA_FEED, mSSVEPDataFeedTF, mTensorflowXDim.toLong(), mTensorflowYDim.toLong())
             mTFInferenceInterface!!.run(mOutputScoresNames)
@@ -288,7 +295,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         val customModel = arrayOf("", "opt_ssvep_net_2ch_S9_psd_hpf3_wlen256",
                 "opt_ssvep_net_2ch_S9_psd_hpf3_wlen384", "opt_ssvep_net_2ch_S9_psd_hpf3_wlen512",
                 "opt_ssvep_net_2ch_S99_csm_welch_p128_wlen128", "opt_ssvep_net_2ch_S99_csm_welch_p128_wlen256",
-                "opt_ssvep_net_2ch_S99_csm_welch_p256_wlen512")
+                "opt_ssvep_net_2ch_S99_csm_welch_p256_wlen512", "opt_ssvep_net_2ch_S99_time_domain_hpf_new_wlen128",
+                "opt_ssvep_net_2ch_S99_time_domain_hpf_new_wlen256", "opt_ssvep_net_2ch_S99_time_domain_hpf_new_wlen512")
 
         val tensorflowModelLocation = customModelPath + customModel[integerValue] + ".pb"
         for (s in customModel) {
@@ -300,6 +308,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             2 -> 384
             3, 6 -> 512
             4 -> 128
+            7 -> 128
+            8 -> 256
+            9 -> 512
             else -> 256
         }
         mTensorflowXDim = when (integerValue) {
@@ -311,7 +322,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             1, 2, 3 -> mTensorflowWindowSize / 2
             4, 5 -> 64
             6 -> 128
-            else -> 128
+            7, 8, 9 -> mTensorflowWindowSize
+            else -> mTensorflowWindowSize
         }
         Log.e(TAG, "Input Length: 2x" + mTensorflowWindowSize + " Output = " + mTensorflowXDim + "x" + mTensorflowYDim)
         when {

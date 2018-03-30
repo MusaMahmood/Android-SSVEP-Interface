@@ -58,5 +58,8 @@
         <item>"128-point CSM"</item>
         <item>"256-point CSM"</item>
         <item>"512-point CSM"</item>
+        <item>"128-point TD"</item>
+        <item>"256-point TD"</item>
+        <item>"512-point TD"</item>
     </string-array>
 </resources>

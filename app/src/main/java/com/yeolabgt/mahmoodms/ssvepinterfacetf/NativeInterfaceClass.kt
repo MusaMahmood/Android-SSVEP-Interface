@@ -21,6 +21,8 @@ class NativeInterfaceClass {
     @Throws(IllegalArgumentException::class)
     external fun jTFCSMExtraction(a: DoubleArray, length: Int): FloatArray
     @Throws(IllegalArgumentException::class)
+    external fun jtimeDomainPreprocessing(a: DoubleArray, length: Int): FloatArray
+    @Throws(IllegalArgumentException::class)
     external fun jLoadfPSD(sampleRate: Int, windowLength: Int): DoubleArray
 
     companion object {
