@@ -5,7 +5,7 @@
 // File: tf_timedomain_preprocess.cpp
 //
 // MATLAB Coder version            : 3.3
-// C/C++ source code generated on  : 29-Mar-2018 12:23:41
+// C/C++ source code generated on  : 25-Apr-2018 13:54:32
 //
 
 // Include Files
@@ -16,10 +16,10 @@
 static void filter(const double x_data[], const int x_size[1], const double zi[3],
                    double y_data[], int y_size[1]);
 static void filtfilt(const double x_in_data[], const int x_in_size[1], double
-                     y_out_data[], int y_out_size[2]);
+y_out_data[], int y_out_size[2]);
 static void flipud(double x_data[], int x_size[1]);
 static void rescale_minmax(const double X_data[], const int X_size[2], double
-  Y_data[], int Y_size[2]);
+Y_data[], int Y_size[2]);
 
 // Function Definitions
 
@@ -39,11 +39,11 @@ static void filter(const double x_data[], const int x_size[1], const double zi[3
   int k;
   int j;
   static const double dv0[4] = { 0.90431873448479, -2.7129562034543691,
-    2.7129562034543691, -0.90431873448479 };
+                                 2.7129562034543691, -0.90431873448479 };
 
   double as;
   static const double dv1[4] = { 1.0, -2.7990220146733029, 2.6177355009222332,
-    -0.81779236028278 };
+                                 -0.81779236028278 };
 
   y_size[0] = (short)x_size[0];
   nx = x_size[0];
@@ -91,7 +91,7 @@ static void filter(const double x_data[], const int x_size[1], const double zi[3
 // Return Type  : void
 //
 static void filtfilt(const double x_in_data[], const int x_in_size[1], double
-                     y_out_data[], int y_out_size[2])
+y_out_data[], int y_out_size[2])
 {
   double d0;
   double d1;
@@ -101,7 +101,7 @@ static void filtfilt(const double x_in_data[], const int x_in_size[1], double
   int y_size[1];
   double a[3];
   static const double b_a[3] = { -0.90431873448472977, 1.8086374689694706,
-    -0.90431873448474087 };
+                                 -0.90431873448474087 };
 
   double b_y_data[530];
   int b_y_size[1];
@@ -187,7 +187,7 @@ static void flipud(double x_data[], int x_size[1])
 // Return Type  : void
 //
 static void rescale_minmax(const double X_data[], const int X_size[2], double
-  Y_data[], int Y_size[2])
+Y_data[], int Y_size[2])
 {
   int ixstart;
   int n;
@@ -267,7 +267,7 @@ static void rescale_minmax(const double X_data[], const int X_size[2], double
 // Return Type  : void
 //
 void tf_timedomain_preprocess(const double X_data[], const int X_size[1], float
-  Y_data[], int Y_size[2])
+Y_data[], int Y_size[2])
 {
   double Y1_data[512];
   int Y1_size[2];
@@ -284,7 +284,25 @@ void tf_timedomain_preprocess(const double X_data[], const int X_size[1], float
     for (i0 = 0; i0 < loop_ub; i0++) {
       Y_data[i0] = (float)Y2_data[i0];
     }
+  } else if (X_size[0] == 192) {
+    filtfilt(X_data, X_size, Y1_data, Y1_size);
+    rescale_minmax(Y1_data, Y1_size, Y2_data, Y2_size);
+    Y_size[0] = Y2_size[0];
+    Y_size[1] = 1;
+    loop_ub = Y2_size[0] * Y2_size[1];
+    for (i0 = 0; i0 < loop_ub; i0++) {
+      Y_data[i0] = (float)Y2_data[i0];
+    }
   } else if (X_size[0] == 256) {
+    filtfilt(X_data, X_size, Y1_data, Y1_size);
+    rescale_minmax(Y1_data, Y1_size, Y2_data, Y2_size);
+    Y_size[0] = Y2_size[0];
+    Y_size[1] = 1;
+    loop_ub = Y2_size[0] * Y2_size[1];
+    for (i0 = 0; i0 < loop_ub; i0++) {
+      Y_data[i0] = (float)Y2_data[i0];
+    }
+  } else if (X_size[0] == 384) {
     filtfilt(X_data, X_size, Y1_data, Y1_size);
     rescale_minmax(Y1_data, Y1_size, Y2_data, Y2_size);
     Y_size[0] = Y2_size[0];

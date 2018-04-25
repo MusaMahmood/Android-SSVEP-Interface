@@ -9,10 +9,9 @@
 #include "tf_psd_rescale_w256.h"
 #include "tf_psd_rescale_w384.h"
 #include "tf_psd_rescale_w512.h"
-#include "tf_csm_welch_w128.h"
-#include "tf_csm_welch_w256.h"
-#include "tf_csm_welch_w512.h"
 #include "tf_timedomain_preprocess.h"
+#include "tf_csm_p128.h"
+#include "tf_csm_p256.h"
 
 /*Additional Includes*/
 #include <jni.h>
@@ -64,7 +63,7 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jtimeDomainPre
     float Y[length]; // Set Y Length
     int y_size[2];
     int x_size[] = {length}; //sizeof 1
-    if (length == 128 || length == 256 || length == 512) {
+    if (length == 128 || length == 192 || length == 256 ||  length == 512 || length == 384) {
         tf_timedomain_preprocess(X, x_size, Y, y_size);
     }
     env->SetFloatArrayRegion(m_result, 0, length, Y);
@@ -85,13 +84,12 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jTFCSMExtracti
         output_length = 384; // 3 * 256/2
     }
     jfloatArray m_result = env->NewFloatArray(output_length);
+    int x_size[] = {length};
     float Y[output_length]; // Set Y Length
-    if (length == 128) {
-        tf_csm_welch_w128(X, Y);
-    } else if (length == 256) {
-        tf_csm_welch_w256(X, Y);
-    } else if (length == 512) {
-        tf_csm_welch_w512(X, Y);
+    if (length == 128 || length == 256 || length == 192) {
+        tf_csm_p128(X, x_size, Y);
+    } else if (length == 512 || length == 384) {
+        tf_csm_p256(X, x_size, Y);
     }
     env->SetFloatArrayRegion(m_result, 0, output_length, Y);
     return m_result;
