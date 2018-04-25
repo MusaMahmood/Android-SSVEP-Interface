@@ -132,21 +132,28 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="F" />
+            android:text="F↑" />
 
         <Button
             android:id="@+id/buttonL"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="L" />
+            android:text="L←" />
 
         <Button
             android:id="@+id/buttonR"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="R" />
+            android:text="R→" />
+
+        <Button
+            android:id="@+id/buttonReverse"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="R↓" />
 
     </LinearLayout>
 

@@ -77,11 +77,13 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jTFCSMExtracti
         JNIEnv *env, jobject jobject1, jdoubleArray ch1_2_data, jint length) {
     jdouble *X = env->GetDoubleArrayElements(ch1_2_data, NULL); if (X == NULL) LOGE("ERROR - C_ARRAY IS NULL");
      //length/2*2=Divide by two for normal length, but we are looking at 2 vectors.
-    int output_length = 0;
-    if (length == 128 || length == 256) {
+    int output_length;
+    if (length == 128 || length == 256 || length == 192) {
         output_length = 192; // 3 * 128(psd_wlen)/2
-    } else if (length == 512) {
-        output_length = 384; // 3 * 256/2
+    } else if (length == 512 || length == 384) {
+        output_length = 384; // 3 * 256(psd_wlen)/2
+    } else {
+        output_length = 0;
     }
     jfloatArray m_result = env->NewFloatArray(output_length);
     int x_size[] = {length};

@@ -84,6 +84,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     private var mFButton: Button? = null
     private var mLButton: Button? = null
     private var mRButton: Button? = null
+    private var mReverseButton: Button? = null
     private var mChannelSelect: ToggleButton? = null
     private var menu: Menu? = null
     //Data throughput counter
@@ -131,21 +132,19 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                     mCh2!!.classificationBufferSize - mTensorflowWindowSize - 1,
                     ch2Doubles, 0, mTensorflowWindowSize)
             // TODO: it is easier to copy from each array into the larger array instead of doing this:
-            val chConcat = Doubles.concat(ch1Doubles, ch2Doubles)
-            Log.i(TAG, "chConcat.size/2: " + chConcat.size / 2)
-
+//            val chConcat = Doubles.concat(ch1Doubles, ch2Doubles)
+//            Log.i(TAG, "chConcat.size/2: " + chConcat.size / 2)
             var mSSVEPDataFeedTF = FloatArray(mTensorflowXDim * mTensorflowYDim)
-            if (mTensorflowSolutionIndex in 1..3) {
-                mSSVEPDataFeedTF = mNativeInterface.jTFPSDExtraction(chConcat, mTensorflowWindowSize)
-            } else if (mTensorflowSolutionIndex in 4..6) {
-                mSSVEPDataFeedTF = mNativeInterface.jTFCSMExtraction(chConcat, mTensorflowWindowSize)
-            } else if (mTensorflowSolutionIndex in 7..9) {
-                val ch1 = mNativeInterface.jtimeDomainPreprocessing(ch1Doubles, mTensorflowWindowSize)
-                val ch2 = mNativeInterface.jtimeDomainPreprocessing(ch2Doubles, mTensorflowWindowSize)
-                mSSVEPDataFeedTF = Floats.concat(ch1, ch2)
+            val ch1 = mNativeInterface.jtimeDomainPreprocessing(ch1Doubles, mTensorflowWindowSize)
+            val ch2 = mNativeInterface.jtimeDomainPreprocessing(ch2Doubles, mTensorflowWindowSize)
+            val mFilteredDataFloats = Floats.concat(ch1, ch2)
+            if (mTensorflowSolutionIndex in 1..5) {
+                val filteredDataDoubles: DoubleArray = DataChannel.convertFloatsToDoubles(mFilteredDataFloats)
+                mSSVEPDataFeedTF = mNativeInterface.jTFCSMExtraction(filteredDataDoubles, mTensorflowWindowSize)
+            } else if (mTensorflowSolutionIndex in 6..10) {
+                mSSVEPDataFeedTF = mFilteredDataFloats
             }
             // 1 - feed probabilities:
-
             mTFInferenceInterface!!.feed("keep_prob", floatArrayOf(1f))
             mTFInferenceInterface!!.feed(INPUT_DATA_FEED, mSSVEPDataFeedTF, mTensorflowXDim.toLong(), mTensorflowYDim.toLong())
             mTFInferenceInterface!!.run(mOutputScoresNames)
@@ -224,6 +223,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         mFButton = findViewById(R.id.buttonF)
         mLButton = findViewById(R.id.buttonL)
         mRButton = findViewById(R.id.buttonR)
+        mReverseButton = findViewById(R.id.buttonReverse)
         val mTensorflowSwitch = findViewById<Switch>(R.id.tensorflowClassificationSwitch)
         changeUIElementVisibility(false)
         mLastTime = System.currentTimeMillis()
@@ -267,8 +267,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         }
         mSButton!!.setOnClickListener { executeWheelchairCommand(0) }
         mFButton!!.setOnClickListener { executeWheelchairCommand(1) }
-        mLButton!!.setOnClickListener { executeWheelchairCommand(3) }
-        mRButton!!.setOnClickListener { executeWheelchairCommand(2) }
+        mLButton!!.setOnClickListener { executeWheelchairCommand(2) }
+        mRButton!!.setOnClickListener { executeWheelchairCommand(3) }
+        mReverseButton!!.setOnClickListener { executeWheelchairCommand(4) }
         mExportButton.setOnClickListener { exportData() }
         writeNewSettings.setOnClickListener {
             //only read 2-ch datas
@@ -289,40 +290,41 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
 
     private fun enableTensorFlowModel(embeddedModel: File, integerValue: Int) {
         mTensorflowSolutionIndex = integerValue
-        val customModelPath = Environment.getExternalStorageDirectory().absolutePath + "/Download/tensorflow_assets/"
+        val customModelPath = Environment.getExternalStorageDirectory().absolutePath + "/Download/tensorflow_assets/ssvep_final/"
         // Hard-coded Strings of Model Names
         // NOTE: Zero index is an empty string (no model)
-        val customModel = arrayOf("", "opt_ssvep_net_2ch_S9_psd_hpf3_wlen256",
-                "opt_ssvep_net_2ch_S9_psd_hpf3_wlen384", "opt_ssvep_net_2ch_S9_psd_hpf3_wlen512",
-                "opt_ssvep_net_2ch_S99_csm_welch_p128_wlen128", "opt_ssvep_net_2ch_S99_csm_welch_p128_wlen256",
-                "opt_ssvep_net_2ch_S99_csm_welch_p256_wlen512", "opt_ssvep_net_2ch_S99_time_domain_hpf_new_wlen128",
-                "opt_ssvep_net_2ch_S99_time_domain_hpf_new_wlen256", "opt_ssvep_net_2ch_S99_time_domain_hpf_new_wlen512")
+        val customModel = arrayOf("",
+                "CSM128_opt_CNN-1-a.parametricrelu.[0.1]-drop0.5-fc.1024.relu-lr.1e-3-k.[5]",
+                "CSM192_opt_CNN-1-a.parametricrelu.[0.1]-drop0.5-fc.1024.relu-lr.1e-3-k.[5]",
+                "CSM256_opt_CNN-1-a.parametricrelu.[0.1]-drop0.5-fc.1024.relu-lr.1e-3-k.[5]",
+                "CSM384_opt_CNN-1-a.parametricrelu.[0.1]-drop0.5-fc.1024.relu-lr.1e-3-k.[5]",
+                "CSM512_opt_CNN-1-a.parametricrelu.[0.1]-drop0.5-fc.1024.relu-lr.1e-3-k.[5]",
+                "TD128_opt_CNN-4-a.parametricrelu.[0.75, 0.5, 0.25, 0.1]-drop0.5-fc.1024.relu-lr.1e-3-k.[50, 25, 12, 5]",
+                "TD192_opt_CNN-4-a.parametricrelu.[0.75, 0.5, 0.25, 0.1]-drop0.5-fc.1024.relu-lr.1e-3-k.[50, 25, 12, 5]",
+                "TD256_opt_CNN-4-a.parametricrelu.[0.75, 0.5, 0.25, 0.1]-drop0.5-fc.1024.relu-lr.1e-3-k.[50, 25, 12, 5]",
+                "TD384_opt_CNN-4-a.parametricrelu.[0.75, 0.5, 0.25, 0.1]-drop0.5-fc.1024.relu-lr.1e-3-k.[50, 25, 12, 5]",
+                "TD512_opt_CNN-4-a.parametricrelu.[0.75, 0.5, 0.25, 0.01]-drop0.5-fc.1024.relu-lr.1e-3-k.[50, 25, 12, 5]")
 
         val tensorflowModelLocation = customModelPath + customModel[integerValue] + ".pb"
         for (s in customModel) {
-            val tempPath = customModelPath + s + ".pb"
-            Log.e(TAG, "Model " + tempPath + " exists? " + File(tempPath).exists().toString())
+            val modelFolderPath = "$customModelPath$s.pb"
+            Log.e(TAG, "Model " + modelFolderPath + " exists? " + File(modelFolderPath).exists().toString())
         }
         mTensorflowWindowSize = when (integerValue) {
-            1, 5 -> 256
-            2 -> 384
-            3, 6 -> 512
-            4 -> 128
-            7 -> 128
-            8 -> 256
-            9 -> 512
+            1, 6 -> 128
+            2, 7 -> 192
+            3, 8 -> 256
+            4, 9 -> 384
+            5, 10 -> 512
             else -> 256
         }
         mTensorflowXDim = when (integerValue) {
-            1, 2, 3 -> 2
-            4, 5, 6 -> 3
-            else -> 2
+            in 1..5 -> 3 // CSM
+            else -> 2 // Anything else (T-D, PSD)
         }
         mTensorflowYDim = when (integerValue) {
-            1, 2, 3 -> mTensorflowWindowSize / 2
-            4, 5 -> 64
-            6 -> 128
-            7, 8, 9 -> mTensorflowWindowSize
+            in 1..3 -> 64
+            4, 5 -> 128
             else -> mTensorflowWindowSize
         }
         Log.e(TAG, "Input Length: 2x" + mTensorflowWindowSize + " Output = " + mTensorflowXDim + "x" + mTensorflowYDim)
@@ -762,6 +764,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             mFButton!!.visibility = viewVisibility
             mLButton!!.visibility = viewVisibility
             mRButton!!.visibility = viewVisibility
+            mReverseButton!!.visibility = viewVisibility
         }
     }
 
@@ -953,19 +956,19 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                 }
                 (second == mSDS) -> {
                     mSSVEPClass = 1.0
-                    updateTrainingPrompt("15.15Hz")
+                    updateTrainingPrompt("11.1Hz")
                 }
                 (second == 2 * mSDS) -> {
                     mSSVEPClass = 2.0
-                    updateTrainingPrompt("16.67hz")
+                    updateTrainingPrompt("12.5hz")
                 }
                 (second == 3 * mSDS) -> {
                     mSSVEPClass = 3.0
-                    updateTrainingPrompt("18.51Hz")
+                    updateTrainingPrompt("15.2Hz")
                 }
                 (second == 4 * mSDS) -> {
                     mSSVEPClass = 4.0
-                    updateTrainingPrompt("20.00Hz")
+                    updateTrainingPrompt("16.7Hz")
                 }
                 (second == 5 * mSDS) -> {
                     mSSVEPClass = 0.0
@@ -1005,9 +1008,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         val bytes = ByteArray(1)
         when (command) {
             0 -> bytes[0] = 0x00.toByte()
-            1 -> bytes[0] = 0x01.toByte() //Stop
-            2 -> bytes[0] = 0xF0.toByte() //?
-            3 -> bytes[0] = 0x0F.toByte()
+            1 -> bytes[0] = 0x01.toByte() // Stop
+            2 -> bytes[0] = 0xF0.toByte() // Rotate Left
+            3 -> bytes[0] = 0x0F.toByte() // Rotate Right ??
             4 -> bytes[0] = 0xFF.toByte() // TODO: 6/27/2017 Disconnect instead of reverse?
             else -> {
             }

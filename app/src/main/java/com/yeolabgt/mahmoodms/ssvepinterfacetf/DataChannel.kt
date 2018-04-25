@@ -69,6 +69,14 @@ internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classifi
         private val HEX_CHARS = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
                                         'A', 'B', 'C', 'D', 'E', 'F')
 
+        fun convertFloatsToDoubles(input: FloatArray?): DoubleArray {
+            val output = DoubleArray(input!!.size)
+            for (i in input.indices) {
+                output[i] = input[i].toDouble()
+            }
+            return output
+        }
+
         fun byteArrayToHexString(byteArray: ByteArray) : String = byteArray.toHex()
 
         private fun ByteArray.toHex() : String {
