@@ -644,11 +644,17 @@ PSD[499]) {
     //  plotData  = Plot Data
     // %%%% - Thresholds: - %%%%%
     for (i0 = 0; i0 < 2; i0++) {
-        threshPSD[5 * i0] = 9.0 + 4.0 * (double) i0;
-        threshPSD[1 + 5 * i0] = 14.0 + 1.5 * (double) i0;
-        threshPSD[2 + 5 * i0] = 16.1 + 1.0999999999999979 * (double) i0;
-        threshPSD[3 + 5 * i0] = 18.0 + 0.80000000000000071 * (double) i0;
-        threshPSD[4 + 5 * i0] = 19.4 + 0.80000000000000071 * (double) i0;
+        //ORIGINALS:
+//        threshPSD[5 * i0] = 9.0 + 4.0 * (double) i0;
+//        threshPSD[1 + 5 * i0] = 14.0 + 1.5 * (double) i0;
+//        threshPSD[2 + 5 * i0] = 16.1 + 1.0999999999999979 * (double) i0;
+//        threshPSD[3 + 5 * i0] = 18.0 + 0.80000000000000071 * (double) i0;
+//        threshPSD[4 + 5 * i0] = 19.4 + 0.80000000000000071 * (double) i0;
+        threshPSD[5 * i0] = 8.0 + 2.5 * (double) i0; // [8→10.5]
+        threshPSD[1 + 5 * i0] = 10.51 + 1.5 * (double) i0; // 11.1 [10.51→12.01]
+        threshPSD[2 + 5 * i0] = 12.1 + 1.5 * (double) i0; // 12.5 [12.1→13.6]
+        threshPSD[3 + 5 * i0] = 14.0 + 1.66 * (double) i0; //15.15 [14→15.66]
+        threshPSD[4 + 5 * i0] = 16.1 + 1.0999999999999979 * (double) i0; // 16.67 [16.1→17.2]
     }
 
     // %% - Constants - %%%

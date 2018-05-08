@@ -24,7 +24,7 @@ project.ext.ASSET_DIR = getProjectDir().toString() + '/assets'
 
 android {
     compileSdkVersion 26
-    buildToolsVersion '26.0.2'
+    buildToolsVersion '27.0.3'
     defaultConfig {
         applicationId "com.yeolabgt.mahmoodms.ssvepinterfacetf"
         minSdkVersion 22
@@ -97,4 +97,7 @@ dependencies {
     if (nativeBuildSystem == 'cmake' || nativeBuildSystem == 'none') {
         compile 'org.tensorflow:tensorflow-android:+'
     }
+
+    //Parrot Drones SDK
+    compile 'com.parrot:arsdk:3.13.0'
 }

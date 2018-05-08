@@ -1,6 +1,7 @@
 package com.yeolabgt.mahmoodms.ssvepinterfacetf
 
 import android.app.Activity
+import android.app.ProgressDialog
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
@@ -30,7 +31,13 @@ import android.widget.*
 import com.androidplot.util.Redrawer
 import com.google.common.primitives.Doubles
 import com.google.common.primitives.Floats
+import com.parrot.arsdk.arcommands.ARCOMMANDS_JUMPINGSUMO_MEDIARECORDEVENT_PICTUREEVENTCHANGED_ERROR_ENUM
+import com.parrot.arsdk.arcontroller.ARCONTROLLER_DEVICE_STATE_ENUM
+import com.parrot.arsdk.arcontroller.ARControllerCodec
+import com.parrot.arsdk.arcontroller.ARFrame
+import com.parrot.arsdk.ardiscovery.ARDiscoveryDeviceService
 import com.yeolabgt.mahmoodms.actblelibrary.ActBle
+import com.yeolabgt.mahmoodms.ssvepinterfacetf.ParrotDrone.JSDrone
 import kotlinx.android.synthetic.main.activity_device_control.*
 
 import org.tensorflow.contrib.android.TensorFlowInferenceInterface
@@ -115,6 +122,23 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     // Native Interface Function Handler:
     private val mNativeInterface = NativeInterfaceClass()
 
+    // Drone Stuff:
+    private var mARService: ARDiscoveryDeviceService? = null
+    private var mJSDrone: JSDrone? = null
+
+    private var mConnectionProgressDialog: ProgressDialog? = null
+
+    private val mJSDroneSpeedLR: Int = 20
+    private val mJSDroneSpeedFWREV: Int = 20
+
+    private enum class AudioState {
+        MUTE,
+        INPUT,
+        BIDIRECTIONAL
+    }
+
+    private var mAudioState = AudioState.MUTE
+
     private val mClassifyThread = Runnable {
         val y: DoubleArray
         if (mTFRunModel) {
@@ -132,8 +156,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                     mCh2!!.classificationBufferSize - mTensorflowWindowSize - 1,
                     ch2Doubles, 0, mTensorflowWindowSize)
             // TODO: it is easier to copy from each array into the larger array instead of doing this:
-//            val chConcat = Doubles.concat(ch1Doubles, ch2Doubles)
-//            Log.i(TAG, "chConcat.size/2: " + chConcat.size / 2)
             var mSSVEPDataFeedTF = FloatArray(mTensorflowXDim * mTensorflowYDim)
             val ch1 = mNativeInterface.jtimeDomainPreprocessing(ch1Doubles, mTensorflowWindowSize)
             val ch2 = mNativeInterface.jtimeDomainPreprocessing(ch2Doubles, mTensorflowWindowSize)
@@ -265,17 +287,32 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                 Toast.makeText(applicationContext, "Using PSD Analysis", Toast.LENGTH_SHORT).show()
             }
         }
-        mSButton!!.setOnClickListener { executeWheelchairCommand(0) }
-        mFButton!!.setOnClickListener { executeWheelchairCommand(1) }
-        mLButton!!.setOnClickListener { executeWheelchairCommand(2) }
-        mRButton!!.setOnClickListener { executeWheelchairCommand(3) }
-        mReverseButton!!.setOnClickListener { executeWheelchairCommand(4) }
+        mSButton!!.setOnClickListener {
+            executeWheelchairCommand(0)
+        }
+        mFButton!!.setOnClickListener {
+            executeWheelchairCommand(1)
+        }
+        mLButton!!.setOnClickListener {
+            executeWheelchairCommand(2)
+        }
+        mRButton!!.setOnClickListener {
+            executeWheelchairCommand(3)
+        }
+        mReverseButton!!.setOnClickListener {
+            executeWheelchairCommand(4)
+        }
         mExportButton.setOnClickListener { exportData() }
         writeNewSettings.setOnClickListener {
             //only read 2-ch datas
             val bytes = ADS1299_DEFAULT_BYTE_CONFIG
             writeNewADS1299Settings(bytes)
         }
+        mARService = intent.getParcelableExtra(MainActivity.EXTRA_DRONE_SERVICE)
+        mJSDrone = JSDrone(this, mARService!!)
+        mJSDrone?.addListener(mJSListener)
+        connectDrone()
+        setAudioState(AudioState.MUTE)
     }
 
     private fun showNoticeDialog() {
@@ -490,8 +527,29 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         invalidateOptionsMenu()
     }
 
+    private fun connectDrone(): Boolean {
+        // show a loading view while the JumpingSumo drone is connecting
+        if (mJSDrone != null && ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_RUNNING != mJSDrone!!.connectionState) {
+            mConnectionProgressDialog = ProgressDialog(this, R.style.AppCompatAlertDialogStyle)
+            mConnectionProgressDialog!!.isIndeterminate = true
+            mConnectionProgressDialog!!.setMessage("Connecting ...")
+            mConnectionProgressDialog!!.show()
+
+            // if the connection to the Jumping fails, finish the activity
+            if (!mJSDrone!!.connect()) {
+                Toast.makeText(applicationContext, "Failed to Connect Drone", Toast.LENGTH_LONG).show()
+                finish()
+                return false
+            }
+            return true
+        } else {
+            return false
+        }
+    }
+
     override fun onDestroy() {
         mRedrawer?.finish()
+        mJSDrone?.dispose()
         disconnectAllBLE()
         try {
             terminateDataFileWriter()
@@ -1004,11 +1062,60 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         }
     }
 
+    private fun executeDroneCommand(command: Int) {
+        mJSDrone?.setTurn(0.toByte())
+        mJSDrone?.setSpeed(0.toByte())
+        mJSDrone?.setFlag(0.toByte())
+        if (mJSDrone!=null && mWheelchairControl) {
+            when (command) {
+                0 -> { //Do Nothing
+                    mJSDrone?.setTurn(0.toByte())
+                    mJSDrone?.setSpeed(0.toByte())
+                    mJSDrone?.setFlag(0.toByte())
+                }
+                1 -> {//FWD:
+                    mJSDrone?.setSpeed(mJSDroneSpeedFWREV.toByte())
+                    mJSDrone?.setFlag(1.toByte())
+                }
+                2 -> { // LEFT
+                    mJSDrone?.setTurn((-mJSDroneSpeedLR).toByte())
+                    mJSDrone?.setFlag(1.toByte())
+                }
+                3 -> { // RIGHT
+                    mJSDrone?.setTurn((mJSDroneSpeedLR).toByte())
+                    mJSDrone?.setFlag(1.toByte())
+                }
+                4 -> {
+                    // REVERSE:
+                    mJSDrone?.setSpeed((-50).toByte())
+                    mJSDrone?.setFlag(1.toByte())
+                }
+                else -> {
+                    mJSDrone?.setTurn(0.toByte())
+                    mJSDrone?.setSpeed(0.toByte())
+                    mJSDrone?.setFlag(0.toByte())
+                }
+            }
+        }
+    }
+
     private fun executeWheelchairCommand(command: Int) {
+        //Pass command onto drone:
+        executeDroneCommand(command)
         val bytes = ByteArray(1)
         when (command) {
+        /**
+         * ORIGINAL:
+         *
+         *
+        0 -> bytes[0] = 0x00.toByte()
+        1 -> bytes[0] = 0x01.toByte() // Forward
+        2 -> bytes[0] = 0xF0.toByte() // Rotate Left
+        3 -> bytes[0] = 0x0F.toByte() // Rotate Right ??
+        4 -> bytes[0] = 0xFF.toByte() // TODO: 6/27/2017 Disconnect instead of reverse?
+         */
             0 -> bytes[0] = 0x00.toByte()
-            1 -> bytes[0] = 0x01.toByte() // Stop
+            1 -> bytes[0] = 0x01.toByte() // Forward
             2 -> bytes[0] = 0xF0.toByte() // Rotate Left
             3 -> bytes[0] = 0x0F.toByte() // Rotate Right ??
             4 -> bytes[0] = 0xFF.toByte() // TODO: 6/27/2017 Disconnect instead of reverse?
@@ -1206,6 +1313,119 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         mGraphAdapterCh2PSDA?.series?.clear()
         mGraphAdapterCh1PSDA!!.addDataPointsGeneric(fPSD!!, mPSDCh1, fPSDStartIndex, fPSDEndIndex)
         mGraphAdapterCh2PSDA!!.addDataPointsGeneric(fPSD!!, mPSDCh2, fPSDStartIndex, fPSDEndIndex)
+    }
+
+    private fun setAudioState(audioState: AudioState) {
+        mAudioState = audioState
+        mJSDrone?.setAudioStreamEnabled(false, false)
+//        when (mAudioState) {
+//            JSActivity.AudioState.MUTE -> {
+//                mAudioBt.setText("MUTE")
+//                mJSDrone.setAudioStreamEnabled(false, false)
+//            }
+//
+//            JSActivity.AudioState.INPUT -> {
+//                mAudioBt.setText("INPUT")
+//                mJSDrone.setAudioStreamEnabled(true, false)
+//            }
+//
+//            JSActivity.AudioState.BIDIRECTIONAL -> {
+//                mAudioBt.setText("IN/OUTPUT")
+//                mJSDrone.setAudioStreamEnabled(true, true)
+//            }
+//        }
+    }
+
+    private val mJSListener = object : JSDrone.Listener {
+        override fun onDroneConnectionChanged(state: ARCONTROLLER_DEVICE_STATE_ENUM) {
+            when (state) {
+                ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_RUNNING -> mConnectionProgressDialog?.dismiss()
+
+                ARCONTROLLER_DEVICE_STATE_ENUM.ARCONTROLLER_DEVICE_STATE_STOPPED -> {
+                    // if the deviceController is stopped, go back to the previous activity
+                    mConnectionProgressDialog?.dismiss()
+                    finish()
+                }
+
+                else -> {
+                }
+            }
+        }
+
+        override fun onBatteryChargeChanged(batteryPercentage: Int) {
+//            mBatteryLabel?.setText(String.format("%d%%", batteryPercentage))
+        }
+
+        override fun onPictureTaken(error: ARCOMMANDS_JUMPINGSUMO_MEDIARECORDEVENT_PICTUREEVENTCHANGED_ERROR_ENUM) {
+            Log.i(TAG, "Picture has been taken")
+        }
+
+        override fun configureDecoder(codec: ARControllerCodec) {}
+
+        override fun onFrameReceived(frame: ARFrame) {
+//            mVideoView.displayFrame(frame)
+        }
+
+        override fun onAudioStateReceived(inputEnabled: Boolean, outputEnabled: Boolean) {
+//            if (inputEnabled) {
+//                mAudioPlayer.start()
+//            } else {
+//                mAudioPlayer.stop()
+//            }
+//
+//            if (outputEnabled) {
+//                mAudioRecorder.start()
+//            } else {
+//                mAudioRecorder.stop()
+//            }
+        }
+
+        override fun configureAudioDecoder(codec: ARControllerCodec) {
+//            if (codec.type == ARCONTROLLER_STREAM_CODEC_TYPE_ENUM.ARCONTROLLER_STREAM_CODEC_TYPE_PCM16LE) {
+//
+//                val codecPCM16le = codec.asPCM16LE
+//
+//                mAudioPlayer.configureCodec(codecPCM16le.sampleRate)
+//            }
+        }
+
+        override fun onAudioFrameReceived(frame: ARFrame) {
+//            mAudioPlayer.onDataReceived(frame)
+        }
+
+        override fun onMatchingMediasFound(nbMedias: Int) {
+//            mDownloadProgressDialog.dismiss()
+//
+//            mNbMaxDownload = nbMedias
+//            mCurrentDownloadIndex = 1
+//
+//            if (nbMedias > 0) {
+//                mDownloadProgressDialog = ProgressDialog(this@JSActivity, R.style.AppCompatAlertDialogStyle)
+//                mDownloadProgressDialog.setIndeterminate(false)
+//                mDownloadProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL)
+//                mDownloadProgressDialog.setMessage("Downloading medias")
+//                mDownloadProgressDialog.setMax(mNbMaxDownload * 100)
+//                mDownloadProgressDialog.setSecondaryProgress(mCurrentDownloadIndex * 100)
+//                mDownloadProgressDialog.setProgress(0)
+//                mDownloadProgressDialog.setCancelable(false)
+//                mDownloadProgressDialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", DialogInterface.OnClickListener { dialog, which -> mJSDrone.cancelGetLastFlightMedias() })
+//                mDownloadProgressDialog.show()
+//            }
+        }
+
+        override fun onDownloadProgressed(mediaName: String, progress: Int) {
+//            mDownloadProgressDialog.setProgress((mCurrentDownloadIndex - 1) * 100 + progress)
+        }
+
+        override fun onDownloadComplete(mediaName: String) {
+//            mCurrentDownloadIndex++
+//            mDownloadProgressDialog.setSecondaryProgress(mCurrentDownloadIndex * 100)
+//
+//            if (mCurrentDownloadIndex > mNbMaxDownload) {
+//                mDownloadProgressDialog.dismiss()
+//                mDownloadProgressDialog = null
+//            }
+        }
     }
 
     companion object {

@@ -27,6 +27,9 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ListView
 import android.widget.Toast
+import com.parrot.arsdk.ARSDK
+import com.parrot.arsdk.ardiscovery.ARDiscoveryDeviceService
+import com.yeolabgt.mahmoodms.ssvepinterfacetf.ParrotDrone.DroneDiscoverer
 
 import java.util.ArrayList
 
@@ -49,18 +52,33 @@ class MainActivity : Activity() {
 
     private lateinit var mEditDelayText: EditText
 
+    //Drone Stuff:
+    var mDroneDiscoverer: DroneDiscoverer? = null
+    private val mDronesList = ArrayList<ARDiscoveryDeviceService>()
+    private var selectedArDiscoveryDeviceService: ARDiscoveryDeviceService? = null
+
     private val mScanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
-            runOnUiThread {
-                if (!mDeviceAddressesMAC.contains(result.device.address)) {
-                    scannedDeviceAdapter!!.update(result.device, result.rssi, result.scanRecord)
-                    scannedDeviceAdapter!!.notifyDataSetChanged()
+            //Is in list?
+            var isDrone = false
+            for (i in mDronesList.indices) {
+                if (result.device.name != null) {
+                    if (mDronesList[i].name.toLowerCase() == result.device.name.toLowerCase()) {
+                        isDrone = true
+                    }
+                }
+            }
+            if (!isDrone) {
+                runOnUiThread {
+                    if (!mDeviceAddressesMAC.contains(result.device.address)) {
+                        scannedDeviceAdapter!!.update(result.device, result.rssi, result.scanRecord)
+                        scannedDeviceAdapter!!.notifyDataSetChanged()
+                    }
                 }
             }
             super.onScanResult(callbackType, result)
         }
     }
-
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_device_scan)
@@ -137,12 +155,17 @@ class MainActivity : Activity() {
                     intent.putExtra(INTENT_DEVICES_NAMES, selectedDeviceNames)
                     intent.putExtra(INTENT_DELAY_VALUE_SECONDS, selectedStimulus)
                     intent.putExtra(INTENT_TRAIN_BOOLEAN, mRunTraining)
+                    //add drone
+                    if (selectedArDiscoveryDeviceService != null)
+                        intent.putExtra(EXTRA_DRONE_SERVICE, selectedArDiscoveryDeviceService)
                     startActivity(intent)
                 } else {
                     Toast.makeText(this@MainActivity, "No Devices Selected!", Toast.LENGTH_SHORT).show()
                 }
             }
         }
+        //Drone Stuff:
+        mDroneDiscoverer = DroneDiscoverer(this)
     }
 
     private fun checkPermissions(): Boolean {
@@ -163,6 +186,10 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         super.onPause()
+        //Drone Stuff:
+        mDroneDiscoverer?.stopDiscovering()
+        mDroneDiscoverer?.cleanup()
+        mDroneDiscoverer?.removeListener(mDiscovererListener)
         scanLeDevice(false)
         scannedDeviceAdapter!!.clear()
     }
@@ -174,13 +201,17 @@ class MainActivity : Activity() {
          * dialog to ask permission enable
          */
         if (checkPermissions()) {
-            if (!mBluetoothAdapter!!.isEnabled) {
-                if (!mBluetoothAdapter!!.isEnabled) {
-                    val enableBt = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-                    startActivityForResult(enableBt, REQUEST_ENABLE_BT)
-                }
-            }
-            scanLeDevice(true)
+//            if (!mBluetoothAdapter!!.isEnabled) {
+//                if (!mBluetoothAdapter!!.isEnabled) {
+//                    val enableBt = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+//                    startActivityForResult(enableBt, REQUEST_ENABLE_BT)
+//                }
+//            }
+//            scanLeDevice(true)
+            //Search for drones first:
+            mDroneDiscoverer?.setup()
+            mDroneDiscoverer?.addListener(mDiscovererListener)
+            mDroneDiscoverer?.startDiscovering()
         }
     }
 
@@ -220,6 +251,27 @@ class MainActivity : Activity() {
         invalidateOptionsMenu()
     }
 
+    private val mDiscovererListener = object : DroneDiscoverer.Listener {
+        override fun onDronesListUpdated(dronesList: List<ARDiscoveryDeviceService>) {
+            Log.e(TAG, "Drone Detected!")
+            mDronesList.clear()
+            mDronesList.addAll(dronesList)
+            Log.e(TAG, "Current DroneList Update: " + mDronesList.size.toString())
+            for (service in dronesList) {
+                Log.e(TAG, service.name)
+                if (service.name.toLowerCase().contains("mambo") || service.name.toLowerCase().contains("diesel")) {
+                    selectedArDiscoveryDeviceService = service
+                    mDroneDiscoverer?.stopDiscovering()
+                    mDroneDiscoverer?.cleanup()
+                    mDroneDiscoverer?.removeListener(this)
+                    runOnUiThread { Toast.makeText(this@MainActivity, "Drone Selected! " + service.name, Toast.LENGTH_SHORT).show() }
+                    scanLeDevice(true)
+                    //Stop custom scan & start BLE scan:
+                }
+            }
+        }
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         //if user chose not to enable BT
         if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_CANCELED) {
@@ -249,10 +301,14 @@ class MainActivity : Activity() {
         val INTENT_DEVICES_KEY = "DEVICES_TO_PARSE"
         val INTENT_DEVICES_NAMES = "DEVICE_NAMES_TO_PARSE"
         val INTENT_DELAY_VALUE_SECONDS = "DELAY_VALUE_SECONDS"
+        val EXTRA_DRONE_SERVICE = "EXTRA_DRONE_SERVICE"
         val PERMISSIONS_LIST = arrayOf(
                 Manifest.permission.ACCESS_COARSE_LOCATION,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
                 Manifest.permission.SEND_SMS,
                 Manifest.permission.READ_PHONE_STATE)
+        init {
+            ARSDK.loadSDKLibs()
+        }
     }
 }
