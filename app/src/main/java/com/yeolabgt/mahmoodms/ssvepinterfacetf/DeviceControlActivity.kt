@@ -291,16 +291,20 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             executeWheelchairCommand(0)
         }
         mFButton!!.setOnClickListener {
-            executeWheelchairCommand(1)
+//            executeWheelchairCommand(1)
+            executeWheelchairCommand(4)
         }
         mLButton!!.setOnClickListener {
-            executeWheelchairCommand(2)
-        }
-        mRButton!!.setOnClickListener {
+//            executeWheelchairCommand(2)
             executeWheelchairCommand(3)
         }
+        mRButton!!.setOnClickListener {
+            executeWheelchairCommand(2)
+//            executeWheelchairCommand(3)
+        }
         mReverseButton!!.setOnClickListener {
-            executeWheelchairCommand(4)
+//            executeWheelchairCommand(4)
+            executeWheelchairCommand(0)
         }
         mExportButton.setOnClickListener { exportData() }
         writeNewSettings.setOnClickListener {
@@ -309,10 +313,12 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             writeNewADS1299Settings(bytes)
         }
         mARService = intent.getParcelableExtra(MainActivity.EXTRA_DRONE_SERVICE)
-        mJSDrone = JSDrone(this, mARService!!)
-        mJSDrone?.addListener(mJSListener)
-        connectDrone()
-        setAudioState(AudioState.MUTE)
+        if (mARService != null) {
+            mJSDrone = JSDrone(this, mARService!!)
+            mJSDrone?.addListener(mJSListener)
+            connectDrone()
+            setAudioState(AudioState.MUTE)
+        }
     }
 
     private fun showNoticeDialog() {
@@ -1067,27 +1073,58 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         mJSDrone?.setSpeed(0.toByte())
         mJSDrone?.setFlag(0.toByte())
         if (mJSDrone!=null && mWheelchairControl) {
+            Log.e(TAG, "SendingCommand: " + command.toString())
+            //Original:
+//            when (command) {
+//                0 -> { //Do Nothing
+//                    mJSDrone?.setTurn(0.toByte())
+//                    mJSDrone?.setSpeed(0.toByte())
+//                    mJSDrone?.setFlag(0.toByte())
+//                }
+//                1 -> {//FWD:
+//                    mJSDrone?.setSpeed(mJSDroneSpeedFWREV.toByte())
+//                    mJSDrone?.setFlag(1.toByte())
+//                }
+//                2 -> { // LEFT
+//                    mJSDrone?.setTurn((-mJSDroneSpeedLR).toByte())
+//                    mJSDrone?.setFlag(1.toByte())
+//                }
+//                3 -> { // RIGHT
+//                    mJSDrone?.setTurn((mJSDroneSpeedLR).toByte())
+//                    mJSDrone?.setFlag(1.toByte())
+//                }
+//                4 -> {
+//                    // REVERSE:
+//                    mJSDrone?.setSpeed((-20).toByte())
+//                    mJSDrone?.setFlag(1.toByte())
+//                }
+//                else -> {
+//                    mJSDrone?.setTurn(0.toByte())
+//                    mJSDrone?.setSpeed(0.toByte())
+//                    mJSDrone?.setFlag(0.toByte())
+//                }
+//            }
             when (command) {
                 0 -> { //Do Nothing
                     mJSDrone?.setTurn(0.toByte())
                     mJSDrone?.setSpeed(0.toByte())
                     mJSDrone?.setFlag(0.toByte())
                 }
-                1 -> {//FWD:
-                    mJSDrone?.setSpeed(mJSDroneSpeedFWREV.toByte())
-                    mJSDrone?.setFlag(1.toByte())
+                1 -> {//Do Nothing
+                    mJSDrone?.setTurn(0.toByte())
+                    mJSDrone?.setSpeed(0.toByte())
+                    mJSDrone?.setFlag(0.toByte())
                 }
-                2 -> { // LEFT
-                    mJSDrone?.setTurn((-mJSDroneSpeedLR).toByte())
-                    mJSDrone?.setFlag(1.toByte())
-                }
-                3 -> { // RIGHT
+                2 -> { // RIGHT
                     mJSDrone?.setTurn((mJSDroneSpeedLR).toByte())
                     mJSDrone?.setFlag(1.toByte())
                 }
-                4 -> {
-                    // REVERSE:
-                    mJSDrone?.setSpeed((-50).toByte())
+                3 -> { // LEFT
+                    mJSDrone?.setTurn((-mJSDroneSpeedLR).toByte())
+                    mJSDrone?.setFlag(1.toByte())
+                }
+                4 -> {//FWD:
+                    mJSDrone?.setSpeed(mJSDroneSpeedFWREV.toByte())
                     mJSDrone?.setFlag(1.toByte())
                 }
                 else -> {
@@ -1108,17 +1145,17 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
          * ORIGINAL:
          *
          *
-        0 -> bytes[0] = 0x00.toByte()
-        1 -> bytes[0] = 0x01.toByte() // Forward
-        2 -> bytes[0] = 0xF0.toByte() // Rotate Left
-        3 -> bytes[0] = 0x0F.toByte() // Rotate Right ??
-        4 -> bytes[0] = 0xFF.toByte() // TODO: 6/27/2017 Disconnect instead of reverse?
-         */
             0 -> bytes[0] = 0x00.toByte()
             1 -> bytes[0] = 0x01.toByte() // Forward
             2 -> bytes[0] = 0xF0.toByte() // Rotate Left
             3 -> bytes[0] = 0x0F.toByte() // Rotate Right ??
             4 -> bytes[0] = 0xFF.toByte() // TODO: 6/27/2017 Disconnect instead of reverse?
+         */
+            0 -> bytes[0] = 0x00.toByte()
+            1 -> bytes[0] = 0x00.toByte() // Forward
+            2 -> bytes[0] = 0xF0.toByte() // Rotate Right
+            3 -> bytes[0] = 0x0F.toByte() // Rotate Left
+            4 -> bytes[0] = 0x01.toByte() // TODO: 6/27/2017 Disconnect instead of reverse?
             else -> {
             }
         }
