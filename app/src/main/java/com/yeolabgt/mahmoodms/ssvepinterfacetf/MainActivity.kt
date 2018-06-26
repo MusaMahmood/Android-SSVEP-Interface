@@ -294,14 +294,14 @@ class MainActivity : Activity() {
 
     companion object {
         private val TAG = DeviceControlActivity::class.java.simpleName
-        private val MULTIPLE_PERMISSIONS_REQUEST = 139
-        private val SCAN_PERIOD: Long = 10000
-        private val REQUEST_ENABLE_BT = 12
-        val INTENT_TRAIN_BOOLEAN = "BOOLEAN_TO_PARSE"
-        val INTENT_DEVICES_KEY = "DEVICES_TO_PARSE"
-        val INTENT_DEVICES_NAMES = "DEVICE_NAMES_TO_PARSE"
-        val INTENT_DELAY_VALUE_SECONDS = "DELAY_VALUE_SECONDS"
-        val EXTRA_DRONE_SERVICE = "EXTRA_DRONE_SERVICE"
+        const val MULTIPLE_PERMISSIONS_REQUEST = 139
+        const val SCAN_PERIOD: Long = 10000
+        const val REQUEST_ENABLE_BT = 12
+        const val INTENT_TRAIN_BOOLEAN = "BOOLEAN_TO_PARSE"
+        const val INTENT_DEVICES_KEY = "DEVICES_TO_PARSE"
+        const val INTENT_DEVICES_NAMES = "DEVICE_NAMES_TO_PARSE"
+        const val INTENT_DELAY_VALUE_SECONDS = "DELAY_VALUE_SECONDS"
+        const val EXTRA_DRONE_SERVICE = "EXTRA_DRONE_SERVICE"
         val PERMISSIONS_LIST = arrayOf(
                 Manifest.permission.ACCESS_COARSE_LOCATION,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,

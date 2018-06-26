@@ -128,7 +128,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
 
     private var mConnectionProgressDialog: ProgressDialog? = null
 
-    private val mJSDroneSpeedLR: Int = 20
+    private val mJSDroneSpeedLR: Int = 10
     private val mJSDroneSpeedFWREV: Int = 20
 
     private enum class AudioState {
@@ -1069,9 +1069,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     }
 
     private fun executeDroneCommand(command: Int) {
-        mJSDrone?.setTurn(0.toByte())
-        mJSDrone?.setSpeed(0.toByte())
-        mJSDrone?.setFlag(0.toByte())
+//        mJSDrone?.setTurn(0.toByte())
+//        mJSDrone?.setSpeed(0.toByte())
+//        mJSDrone?.setFlag(0.toByte())
         if (mJSDrone!=null && mWheelchairControl) {
             Log.e(TAG, "SendingCommand: " + command.toString())
             //Original:
@@ -1116,15 +1116,18 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                     mJSDrone?.setFlag(0.toByte())
                 }
                 2 -> { // RIGHT
+                    mJSDrone?.setSpeed(0.toByte())
                     mJSDrone?.setTurn((mJSDroneSpeedLR).toByte())
                     mJSDrone?.setFlag(1.toByte())
                 }
                 3 -> { // LEFT
+                    mJSDrone?.setSpeed(0.toByte())
                     mJSDrone?.setTurn((-mJSDroneSpeedLR).toByte())
                     mJSDrone?.setFlag(1.toByte())
                 }
                 4 -> {//FWD:
                     mJSDrone?.setSpeed(mJSDroneSpeedFWREV.toByte())
+                    mJSDrone?.setTurn(0.toByte())
                     mJSDrone?.setFlag(1.toByte())
                 }
                 else -> {
