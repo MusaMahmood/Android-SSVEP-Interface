@@ -18,7 +18,7 @@ internal class ScannedDevice(val device: BluetoothDevice?, var rssi: Int) {
         }
         displayName = device.name
 
-        if(displayName == null || displayName!!.isEmpty()) {
+        if (displayName == null || displayName!!.isEmpty()) {
             displayName = UNKNOWN
         }
         deviceMac = device.address

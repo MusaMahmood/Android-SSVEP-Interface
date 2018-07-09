@@ -79,6 +79,7 @@ class MainActivity : Activity() {
             super.onScanResult(callbackType, result)
         }
     }
+
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_device_scan)
@@ -307,6 +308,7 @@ class MainActivity : Activity() {
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
                 Manifest.permission.SEND_SMS,
                 Manifest.permission.READ_PHONE_STATE)
+
         init {
             ARSDK.loadSDKLibs()
         }

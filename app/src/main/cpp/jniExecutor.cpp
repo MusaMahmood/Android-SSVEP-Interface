@@ -57,13 +57,14 @@ extern "C" {
 JNIEXPORT jfloatArray JNICALL
 Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jtimeDomainPreprocessing(
         JNIEnv *env, jobject jobject1, jdoubleArray x_array, jint length) {
-    jdouble *X = env->GetDoubleArrayElements(x_array, NULL); if (X == NULL) LOGE("ERROR - C_ARRAY IS NULL");
+    jdouble *X = env->GetDoubleArrayElements(x_array, NULL);
+    if (X == NULL) LOGE("ERROR - C_ARRAY IS NULL");
     //length/2*2=Divide by two for normal length, but we are looking at 2 vectors.
     jfloatArray m_result = env->NewFloatArray(length);
     float Y[length]; // Set Y Length
     int y_size[2];
     int x_size[] = {length}; //sizeof 1
-    if (length == 128 || length == 192 || length == 256 ||  length == 512 || length == 384) {
+    if (length == 128 || length == 192 || length == 256 || length == 512 || length == 384) {
         tf_timedomain_preprocess(X, x_size, Y, y_size);
     }
     env->SetFloatArrayRegion(m_result, 0, length, Y);
@@ -75,8 +76,9 @@ extern "C" {
 JNIEXPORT jfloatArray JNICALL
 Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jTFCSMExtraction(
         JNIEnv *env, jobject jobject1, jdoubleArray ch1_2_data, jint length) {
-    jdouble *X = env->GetDoubleArrayElements(ch1_2_data, NULL); if (X == NULL) LOGE("ERROR - C_ARRAY IS NULL");
-     //length/2*2=Divide by two for normal length, but we are looking at 2 vectors.
+    jdouble *X = env->GetDoubleArrayElements(ch1_2_data, NULL);
+    if (X == NULL) LOGE("ERROR - C_ARRAY IS NULL");
+    //length/2*2=Divide by two for normal length, but we are looking at 2 vectors.
     int output_length;
     if (length == 128 || length == 256 || length == 192) {
         output_length = 192; // 3 * 128(psd_wlen)/2
@@ -102,7 +104,8 @@ extern "C" {
 JNIEXPORT jfloatArray JNICALL
 Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jTFPSDExtraction(
         JNIEnv *env, jobject jobject1, jdoubleArray ch1_2_data, jint length) {
-    jdouble *X = env->GetDoubleArrayElements(ch1_2_data, NULL); if (X == NULL) LOGE("ERROR - C_ARRAY IS NULL");
+    jdouble *X = env->GetDoubleArrayElements(ch1_2_data, NULL);
+    if (X == NULL) LOGE("ERROR - C_ARRAY IS NULL");
     jfloatArray m_result = env->NewFloatArray(length);
     float Y[length]; //length/2*2=Divide by two for normal length, but we are looking at 2 vectors.
     if (length == 256)
@@ -119,10 +122,13 @@ Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jTFPSDExtracti
 extern "C" {
 JNIEXPORT jdoubleArray JNICALL
 Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jPSDExtraction(
-        JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2, jint sampleRate, jint length) {
-    jdouble *X1 = env->GetDoubleArrayElements(ch1, NULL); if (X1 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
-    jdouble *X2 = env->GetDoubleArrayElements(ch2, NULL); if (X2 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
-    if(length==0) {
+        JNIEnv *env, jobject jobject1, jdoubleArray ch1, jdoubleArray ch2, jint sampleRate,
+        jint length) {
+    jdouble *X1 = env->GetDoubleArrayElements(ch1, NULL);
+    if (X1 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
+    jdouble *X2 = env->GetDoubleArrayElements(ch2, NULL);
+    if (X2 == NULL) LOGE("ERROR - C_ARRAY IS NULL");
+    if (length == 0) {
         LOGE("ERROR: LENGTH INVALID");
         return nullptr;
     } else {
@@ -146,12 +152,12 @@ JNIEXPORT jdoubleArray JNICALL
  */
 Java_com_yeolabgt_mahmoodms_ssvepinterfacetf_NativeInterfaceClass_jLoadfPSD(
         JNIEnv *env, jobject jobject1, jint sampleRate, jint win_length) {
-    double fPSD[win_length/2];
-    for (int i = 0; i < win_length/2; i++) {
+    double fPSD[win_length / 2];
+    for (int i = 0; i < win_length / 2; i++) {
         fPSD[i] = (double) i * (double) sampleRate / (double) win_length;
     }
-    jdoubleArray m_result = env->NewDoubleArray(win_length/2);
-    env->SetDoubleArrayRegion(m_result, 0, win_length/2, fPSD);
+    jdoubleArray m_result = env->NewDoubleArray(win_length / 2);
+    env->SetDoubleArrayRegion(m_result, 0, win_length / 2, fPSD);
     return m_result;
 }
 }

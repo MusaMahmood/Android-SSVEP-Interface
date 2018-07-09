@@ -291,11 +291,11 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             executeWheelchairCommand(0)
         }
         mFButton!!.setOnClickListener {
-//            executeWheelchairCommand(1)
+            //            executeWheelchairCommand(1)
             executeWheelchairCommand(4)
         }
         mLButton!!.setOnClickListener {
-//            executeWheelchairCommand(2)
+            //            executeWheelchairCommand(2)
             executeWheelchairCommand(3)
         }
         mRButton!!.setOnClickListener {
@@ -303,7 +303,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
 //            executeWheelchairCommand(3)
         }
         mReverseButton!!.setOnClickListener {
-//            executeWheelchairCommand(4)
+            //            executeWheelchairCommand(4)
             executeWheelchairCommand(0)
         }
         mExportButton.setOnClickListener { exportData() }
@@ -1072,7 +1072,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
 //        mJSDrone?.setTurn(0.toByte())
 //        mJSDrone?.setSpeed(0.toByte())
 //        mJSDrone?.setFlag(0.toByte())
-        if (mJSDrone!=null && mWheelchairControl) {
+        if (mJSDrone != null && mWheelchairControl) {
             Log.e(TAG, "SendingCommand: " + command.toString())
             //Original:
 //            when (command) {
@@ -1148,11 +1148,11 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
          * ORIGINAL:
          *
          *
-            0 -> bytes[0] = 0x00.toByte()
-            1 -> bytes[0] = 0x01.toByte() // Forward
-            2 -> bytes[0] = 0xF0.toByte() // Rotate Left
-            3 -> bytes[0] = 0x0F.toByte() // Rotate Right ??
-            4 -> bytes[0] = 0xFF.toByte() // TODO: 6/27/2017 Disconnect instead of reverse?
+        0 -> bytes[0] = 0x00.toByte()
+        1 -> bytes[0] = 0x01.toByte() // Forward
+        2 -> bytes[0] = 0xF0.toByte() // Rotate Left
+        3 -> bytes[0] = 0x0F.toByte() // Rotate Right ??
+        4 -> bytes[0] = 0xFF.toByte() // TODO: 6/27/2017 Disconnect instead of reverse?
          */
             0 -> bytes[0] = 0x00.toByte()
             1 -> bytes[0] = 0x00.toByte() // Forward

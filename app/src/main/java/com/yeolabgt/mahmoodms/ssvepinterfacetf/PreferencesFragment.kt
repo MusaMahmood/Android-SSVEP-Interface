@@ -68,7 +68,7 @@ class PreferencesFragment : PreferenceFragment() {
             return PreferenceManager.getDefaultSharedPreferences(context).getString("sample_rate_list_preference", "1").toInt()
         }
 
-        fun setGainCh12(context: Context) : Int {
+        fun setGainCh12(context: Context): Int {
             return PreferenceManager.getDefaultSharedPreferences(context).getString("gain_list_preference", "1").toInt()
         }
 

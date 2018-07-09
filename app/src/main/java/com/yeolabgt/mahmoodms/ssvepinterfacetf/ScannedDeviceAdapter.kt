@@ -15,8 +15,9 @@ import android.widget.TextView
  *
  */
 
-internal class ScannedDeviceAdapter//Constructor
-(context: Context, private val resId: Int, private val list: MutableList<ScannedDevice>) : ArrayAdapter<ScannedDevice>(context, resId, list) {
+internal class ScannedDeviceAdapter
+(context: Context, private val resId: Int, private val list: MutableList<ScannedDevice>) :
+        ArrayAdapter<ScannedDevice>(context, resId, list) {
 
     private val inflater: LayoutInflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
 

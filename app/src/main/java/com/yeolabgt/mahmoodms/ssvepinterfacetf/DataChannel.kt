@@ -20,7 +20,7 @@ internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classifi
             field = value
         }
     var classificationBuffer: DoubleArray
-    var classificationBufferFloats: FloatArray
+    private var classificationBufferFloats: FloatArray
 
     init {
         this.packetCounter = 0
@@ -67,7 +67,7 @@ internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classifi
 
     companion object {
         private val HEX_CHARS = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-                                        'A', 'B', 'C', 'D', 'E', 'F')
+                'A', 'B', 'C', 'D', 'E', 'F')
 
         fun convertFloatsToDoubles(input: FloatArray?): DoubleArray {
             val output = DoubleArray(input!!.size)
@@ -77,9 +77,9 @@ internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classifi
             return output
         }
 
-        fun byteArrayToHexString(byteArray: ByteArray) : String = byteArray.toHex()
+        fun byteArrayToHexString(byteArray: ByteArray): String = byteArray.toHex()
 
-        private fun ByteArray.toHex() : String {
+        private fun ByteArray.toHex(): String {
             val result = StringBuffer()
 
             forEach {

@@ -36,7 +36,8 @@ constructor(directory: String, fileName: String, byteResolution: Int, increment:
             if (!resultMkdir) {
                 Log.e(TAG, "MKDIRS FAILED")
             }
-            this.file = File(dir, fileName + ".csv")
+            val csv_file_string = "$fileName.csv"
+            this.file = File(dir, csv_file_string)
             if (this.file.exists() && !this.file.isDirectory) {
                 Log.d(TAG, "File " + this.file.toString()
                         + " already exists - appending data")
@@ -73,13 +74,13 @@ constructor(directory: String, fileName: String, byteResolution: Int, increment:
 
     private fun writeToDiskFloat(vararg byteArrays: ByteArray?) {
         val len = byteArrays.size // Number of channels
-        val floats = if (this.resolutionBits==16)
-            Array(len){FloatArray(byteArrays[0]!!.size/2)}
-            else Array(len){FloatArray(byteArrays[0]!!.size/3)}
+        val floats = if (this.resolutionBits == 16)
+            Array(len) { FloatArray(byteArrays[0]!!.size / 2) }
+        else Array(len) { FloatArray(byteArrays[0]!!.size / 3) }
         for (ch in 0 until len) { // each channel
             if (this.resolutionBits == 16) {
                 for (dp in 0 until byteArrays[ch]!!.size / 2) { // each datapoint
-                    floats[ch][dp] = DataChannel.bytesToFloat32(byteArrays[ch]!![2*dp],
+                    floats[ch][dp] = DataChannel.bytesToFloat32(byteArrays[ch]!![2 * dp],
                             byteArrays[ch]!![2 * dp + 1])
                 }
             } else if (this.resolutionBits == 24) {
@@ -98,13 +99,13 @@ constructor(directory: String, fileName: String, byteResolution: Int, increment:
 
     private fun writeToDiskDouble(vararg byteArrays: ByteArray?) {
         val len = byteArrays.size // Number of channels
-        val doubles = if (this.resolutionBits==16)
-            Array(len){DoubleArray(byteArrays[0]!!.size/2)}
-            else Array(len) {DoubleArray(byteArrays[0]!!.size/3)}
+        val doubles = if (this.resolutionBits == 16)
+            Array(len) { DoubleArray(byteArrays[0]!!.size / 2) }
+        else Array(len) { DoubleArray(byteArrays[0]!!.size / 3) }
         for (ch in 0 until len) { // each channel
             if (this.resolutionBits == 16) {
                 for (dp in 0 until byteArrays[ch]!!.size / 2) { // each datapoint
-                    doubles[ch][dp] = DataChannel.bytesToDouble(byteArrays[ch]!![2*dp],
+                    doubles[ch][dp] = DataChannel.bytesToDouble(byteArrays[ch]!![2 * dp],
                             byteArrays[ch]!![2 * dp + 1])
                 }
             } else if (this.resolutionBits == 24) {

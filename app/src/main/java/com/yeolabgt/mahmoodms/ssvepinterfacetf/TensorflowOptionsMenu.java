@@ -7,9 +7,9 @@ import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.Log;
+
 /**
  * Created by mmahmood31 on 1/12/2018.
- *
  */
 
 public class TensorflowOptionsMenu extends DialogFragment {
@@ -30,6 +30,7 @@ public class TensorflowOptionsMenu extends DialogFragment {
                 });
         return builder.create();
     }
+
     NoticeDialogListener mListener;
 
     public interface NoticeDialogListener {
