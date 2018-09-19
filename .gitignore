@@ -4,25 +4,7 @@ app/build/tmp/compileAndroid-jniX86_64DebugSharedLibraryAndroid-jniMainCpp/optio
 app/build/tmp/
 app/build/generated/
 local.properties
-.gradle/2.10/taskArtifacts/cache.properties
-.gradle/2.10/taskArtifacts/cache.properties.lock
-.gradle/2.10/taskArtifacts/compilationState.bin
-.gradle/2.10/taskArtifacts/fileHashes.bin
-.gradle/2.10/taskArtifacts/fileSnapshots.bin
-.gradle/2.10/taskArtifacts/outputFileStates.bin
-.gradle/2.10/taskArtifacts/taskArtifacts.bin
-.gradle/2.10/tasks/_BeeLeLibrary_compileDebugJavaWithJavac/localClassSetAnalysis/localClassSetAnalysis.bin
-.gradle/2.10/tasks/_BeeLeLibrary_compileDebugJavaWithJavac/localClassSetAnalysis/localClassSetAnalysis.lock
-.gradle/2.10/tasks/_BeeLeLibrary_compileDebugJavaWithJavac/localJarClasspathSnapshot/localJarClasspathSnapshot.bin
-.gradle/2.10/tasks/_BeeLeLibrary_compileDebugJavaWithJavac/localJarClasspathSnapshot/localJarClasspathSnapshot.lock
-.gradle/2.10/tasks/_BeeLeLibrary_compileReleaseJavaWithJavac/localClassSetAnalysis/localClassSetAnalysis.bin
-.gradle/2.10/tasks/_BeeLeLibrary_compileReleaseJavaWithJavac/localClassSetAnalysis/localClassSetAnalysis.lock
-.gradle/2.10/tasks/_BeeLeLibrary_compileReleaseJavaWithJavac/localJarClasspathSnapshot/localJarClasspathSnapshot.bin
-.gradle/2.10/tasks/_BeeLeLibrary_compileReleaseJavaWithJavac/localJarClasspathSnapshot/localJarClasspathSnapshot.lock
-.gradle/2.10/tasks/_app_compileDebugJavaWithJavac/localClassSetAnalysis/localClassSetAnalysis.bin
-.gradle/2.10/tasks/_app_compileDebugJavaWithJavac/localClassSetAnalysis/localClassSetAnalysis.lock
-.gradle/2.10/tasks/_app_compileDebugJavaWithJavac/localJarClasspathSnapshot/localJarClasspathSnapshot.bin
-.gradle/2.10/tasks/_app_compileDebugJavaWithJavac/localJarClasspathSnapshot/localJarClasspathSnapshot.lock
+.gradle/
 .idea/compiler.xml
 .idea/copyright/profiles_settings.xml
 .idea/gradle.xml
@@ -36,7 +18,6 @@ local.properties
 .idea/libraries/support_annotations_23_4_0.xml
 .idea/libraries/support_v4_23_4_0.xml
 .idea/libraries/support_vector_drawable_23_4_0.xml
-.idea/misc (EGR-YEO-12's conflicted copy 2017-01-12).xml
 .idea/misc.xml
 .idea/modules.xml
 .idea/runConfigurations.xml
@@ -52,9 +33,7 @@ build/generated/mockable-android-23.jar
 build/intermediates/dex-cache/cache.xml
 .idea/
 app/.externalNativeBuild/
-.gradle/4.1/fileChanges/last-build.bin
-.gradle/4.1/
-.gradle/buildOutputCleanup/
 build/android-profile/
 build/
 app/gradleBuild/
+.gradle/4.4/taskHistory/taskHistory.lock

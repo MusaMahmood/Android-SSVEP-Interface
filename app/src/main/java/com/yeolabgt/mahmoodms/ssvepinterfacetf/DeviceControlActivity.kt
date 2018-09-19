@@ -2,13 +2,7 @@ package com.yeolabgt.mahmoodms.ssvepinterfacetf
 
 import android.app.Activity
 import android.app.ProgressDialog
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothGatt
-import android.bluetooth.BluetoothGattCharacteristic
-import android.bluetooth.BluetoothGattDescriptor
-import android.bluetooth.BluetoothGattService
-import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothProfile
+import android.bluetooth.*
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -27,7 +21,6 @@ import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
 import android.widget.*
-
 import com.androidplot.util.Redrawer
 import com.google.common.primitives.Doubles
 import com.google.common.primitives.Floats
@@ -38,10 +31,9 @@ import com.parrot.arsdk.arcontroller.ARFrame
 import com.parrot.arsdk.ardiscovery.ARDiscoveryDeviceService
 import com.yeolabgt.mahmoodms.actblelibrary.ActBle
 import com.yeolabgt.mahmoodms.ssvepinterfacetf.ParrotDrone.JSDrone
+import com.yeolabgt.mahmoodms.ssvepinterfacetf.R.id.tensorflowClassificationSwitch
 import kotlinx.android.synthetic.main.activity_device_control.*
-
 import org.tensorflow.contrib.android.TensorFlowInferenceInterface
-
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -663,8 +655,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
              */
             val registerConfigBytes = Arrays.copyOf(ADS1299_DEFAULT_BYTE_CONFIG, ADS1299_DEFAULT_BYTE_CONFIG.size)
             when (PreferencesFragment.setSampleRate(context)) {
-            // TODO: Change response to 6, 5, 4, 3, 2
-            // TODO: we can do rCB[0] = (0x90 + srateInt).toByte()
+                // TODO: Change response to 6, 5, 4, 3, 2
+                // TODO: we can do rCB[0] = (0x90 + srateInt).toByte()
                 0 -> {
                     registerConfigBytes[0] = 0x96.toByte()
                 }
@@ -998,7 +990,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                 }
             }
         }
-
         dataChannel.resetBuffers()
     }
 
@@ -1039,7 +1030,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                     updateTrainingPrompt("Stop!")
                     updateTrainingPromptColor(Color.RED)
                     disconnectAllBLE()
-//                    mSSVEPClass = 5.0
                 }
                 (second == 6 * mSDS) -> {
                 }
@@ -1144,16 +1134,16 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         executeDroneCommand(command)
         val bytes = ByteArray(1)
         when (command) {
-        /**
-         * ORIGINAL:
-         *
-         *
-        0 -> bytes[0] = 0x00.toByte()
-        1 -> bytes[0] = 0x01.toByte() // Forward
-        2 -> bytes[0] = 0xF0.toByte() // Rotate Left
-        3 -> bytes[0] = 0x0F.toByte() // Rotate Right ??
-        4 -> bytes[0] = 0xFF.toByte() // TODO: 6/27/2017 Disconnect instead of reverse?
-         */
+            /**
+             * ORIGINAL:
+             *
+             *
+            0 -> bytes[0] = 0x00.toByte()
+            1 -> bytes[0] = 0x01.toByte() // Forward
+            2 -> bytes[0] = 0xF0.toByte() // Rotate Left
+            3 -> bytes[0] = 0x0F.toByte() // Rotate Right ??
+            4 -> bytes[0] = 0xFF.toByte() // TODO: 6/27/2017 Disconnect instead of reverse?
+             */
             0 -> bytes[0] = 0x00.toByte()
             1 -> bytes[0] = 0x00.toByte() // Forward
             2 -> bytes[0] = 0xF0.toByte() // Rotate Right
