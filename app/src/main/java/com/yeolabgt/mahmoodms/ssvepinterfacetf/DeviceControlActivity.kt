@@ -31,7 +31,6 @@ import com.parrot.arsdk.arcontroller.ARFrame
 import com.parrot.arsdk.ardiscovery.ARDiscoveryDeviceService
 import com.yeolabgt.mahmoodms.actblelibrary.ActBle
 import com.yeolabgt.mahmoodms.ssvepinterfacetf.ParrotDrone.JSDrone
-import com.yeolabgt.mahmoodms.ssvepinterfacetf.R.id.tensorflowClassificationSwitch
 import kotlinx.android.synthetic.main.activity_device_control.*
 import org.tensorflow.contrib.android.TensorFlowInferenceInterface
 import java.io.File
@@ -119,6 +118,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     private var mJSDrone: JSDrone? = null
 
     private var mConnectionProgressDialog: ProgressDialog? = null
+    // TODO: Replace deprecated ProgressDialog with ProgressBar
 
     private val mJSDroneSpeedLR: Int = 10
     private val mJSDroneSpeedFWREV: Int = 20
@@ -436,12 +436,12 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             Toast.makeText(this, "No Devices Queued, Restart!", Toast.LENGTH_SHORT).show()
         }
         mActBle = ActBle(this, mBluetoothManager, this)
-        mBluetoothGattArray = Array(deviceMacAddresses!!.size, { i -> mActBle!!.connect(mBluetoothDeviceArray[i]) })
+        mBluetoothGattArray = Array(deviceMacAddresses!!.size) { i -> mActBle!!.connect(mBluetoothDeviceArray[i]) }
         for (i in mBluetoothDeviceArray.indices) {
             Log.e(TAG, "Connecting to Device: Name: " + (mBluetoothDeviceArray[i]!!.name + " \nMAC:" + mBluetoothDeviceArray[i]!!.address))
             if ("WheelchairControl" == mBluetoothDeviceArray[i]!!.name) {
                 mWheelchairGattIndex = i
-                Log.e(TAG, "mWheelchairGattIndex: " + mWheelchairGattIndex)
+                Log.e(TAG, "mWheelchairGattIndex: $mWheelchairGattIndex")
                 continue //we are done initializing
             } else {
                 mEEGConfigGattIndex = i
@@ -475,7 +475,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             mGraphAdapterCh1!!.setSeriesHistoryDataPoints(250 * 5)
             mGraphAdapterCh2!!.setSeriesHistoryDataPoints(250 * 5)
             val fileNameTimeStamped = "EEG_SSVEPData_" + timeStamp + "_" + mSampleRate.toString() + "Hz"
-            Log.e(TAG, "fileTimeStamp: " + fileNameTimeStamped)
+            Log.e(TAG, "fileTimeStamp: $fileNameTimeStamped")
             try {
                 mPrimarySaveDataFile = SaveDataFile("/EEGData", fileNameTimeStamped,
                         24, 1.toDouble() / mSampleRate)
@@ -831,7 +831,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                 if (characteristic.value != null) {
                     val batteryLevel = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0)
                     updateBatteryStatus(batteryLevel)
-                    Log.i(TAG, "Battery Level :: " + batteryLevel)
+                    Log.i(TAG, "Battery Level :: $batteryLevel")
                 }
             }
             //TODO: NEED TO CHANGE mSampleRate, DataChannel[], and GraphAdapter[] here.
@@ -843,7 +843,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                 }
             }
         } else {
-            Log.e(TAG, "onCharacteristic Read Error" + status)
+            Log.e(TAG, "onCharacteristic Read Error$status")
         }
     }
 
@@ -1255,17 +1255,17 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     }
 
     override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
-        Log.i(TAG, "onCharacteristicWrite :: Status:: " + status)
+        Log.i(TAG, "onCharacteristicWrite :: Status:: $status")
     }
 
     override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {}
 
     override fun onDescriptorRead(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
-        Log.i(TAG, "onDescriptorRead :: Status:: " + status)
+        Log.i(TAG, "onDescriptorRead :: Status:: $status")
     }
 
     override fun onError(errorMessage: String) {
-        Log.e(TAG, "Error:: " + errorMessage)
+        Log.e(TAG, "Error:: $errorMessage")
     }
 
     private fun updateConnectionState(status: String) {
@@ -1295,7 +1295,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             if (finalPercent <= batteryWarning) {
                 mBatteryLevel!!.setTextColor(Color.RED)
                 mBatteryLevel!!.setTypeface(null, Typeface.BOLD)
-                Toast.makeText(applicationContext, "Charge Battery, Battery Low " + status, Toast.LENGTH_SHORT).show()
+                Toast.makeText(applicationContext, "Charge Battery, Battery Low $status", Toast.LENGTH_SHORT).show()
             } else {
                 mBatteryLevel!!.setTextColor(Color.GREEN)
                 mBatteryLevel!!.setTypeface(null, Typeface.BOLD)
@@ -1348,22 +1348,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     private fun setAudioState(audioState: AudioState) {
         mAudioState = audioState
         mJSDrone?.setAudioStreamEnabled(false, false)
-//        when (mAudioState) {
-//            JSActivity.AudioState.MUTE -> {
-//                mAudioBt.setText("MUTE")
-//                mJSDrone.setAudioStreamEnabled(false, false)
-//            }
-//
-//            JSActivity.AudioState.INPUT -> {
-//                mAudioBt.setText("INPUT")
-//                mJSDrone.setAudioStreamEnabled(true, false)
-//            }
-//
-//            JSActivity.AudioState.BIDIRECTIONAL -> {
-//                mAudioBt.setText("IN/OUTPUT")
-//                mJSDrone.setAudioStreamEnabled(true, true)
-//            }
-//        }
     }
 
     private val mJSListener = object : JSDrone.Listener {
@@ -1397,17 +1381,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         }
 
         override fun onAudioStateReceived(inputEnabled: Boolean, outputEnabled: Boolean) {
-//            if (inputEnabled) {
-//                mAudioPlayer.start()
-//            } else {
-//                mAudioPlayer.stop()
-//            }
-//
-//            if (outputEnabled) {
-//                mAudioRecorder.start()
-//            } else {
-//                mAudioRecorder.stop()
-//            }
         }
 
         override fun configureAudioDecoder(codec: ARControllerCodec) {
@@ -1420,41 +1393,15 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         }
 
         override fun onAudioFrameReceived(frame: ARFrame) {
-//            mAudioPlayer.onDataReceived(frame)
         }
 
         override fun onMatchingMediasFound(nbMedias: Int) {
-//            mDownloadProgressDialog.dismiss()
-//
-//            mNbMaxDownload = nbMedias
-//            mCurrentDownloadIndex = 1
-//
-//            if (nbMedias > 0) {
-//                mDownloadProgressDialog = ProgressDialog(this@JSActivity, R.style.AppCompatAlertDialogStyle)
-//                mDownloadProgressDialog.setIndeterminate(false)
-//                mDownloadProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL)
-//                mDownloadProgressDialog.setMessage("Downloading medias")
-//                mDownloadProgressDialog.setMax(mNbMaxDownload * 100)
-//                mDownloadProgressDialog.setSecondaryProgress(mCurrentDownloadIndex * 100)
-//                mDownloadProgressDialog.setProgress(0)
-//                mDownloadProgressDialog.setCancelable(false)
-//                mDownloadProgressDialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", DialogInterface.OnClickListener { dialog, which -> mJSDrone.cancelGetLastFlightMedias() })
-//                mDownloadProgressDialog.show()
-//            }
         }
 
         override fun onDownloadProgressed(mediaName: String, progress: Int) {
-//            mDownloadProgressDialog.setProgress((mCurrentDownloadIndex - 1) * 100 + progress)
         }
 
         override fun onDownloadComplete(mediaName: String) {
-//            mCurrentDownloadIndex++
-//            mDownloadProgressDialog.setSecondaryProgress(mCurrentDownloadIndex * 100)
-//
-//            if (mCurrentDownloadIndex > mNbMaxDownload) {
-//                mDownloadProgressDialog.dismiss()
-//                mDownloadProgressDialog = null
-//            }
         }
     }
 
