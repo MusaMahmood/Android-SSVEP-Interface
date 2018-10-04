@@ -24,7 +24,7 @@ project.ext.ASSET_DIR = getProjectDir().toString() + '/assets'
 
 android {
     compileSdkVersion 26
-    buildToolsVersion '26.0.2'
+    buildToolsVersion '28.0.2'
     defaultConfig {
         applicationId "com.yeolabgt.mahmoodms.ssvepinterfacetf"
         minSdkVersion 22
@@ -91,7 +91,7 @@ dependencies {
     androidTestImplementation('com.android.support.test.espresso:espresso-core:3.0.1', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
     //TensorFlow
     if (nativeBuildSystem == 'cmake' || nativeBuildSystem == 'none') {
