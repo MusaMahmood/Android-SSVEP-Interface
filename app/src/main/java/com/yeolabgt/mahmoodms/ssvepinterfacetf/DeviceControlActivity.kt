@@ -73,17 +73,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     private var mNumberOfClassifierCalls = 0
     private var mRunTrainingBool: Boolean = false
     //UI Elements - TextViews, Buttons, etc
-    private var mTrainingInstructions: TextView? = null
     private var mBatteryLevel: TextView? = null
-    private var mDataRate: TextView? = null
-    private var mSSVEPClassTextView: TextView? = null
     private var mYfitTextView: TextView? = null
-    private var mSButton: Button? = null
-    private var mFButton: Button? = null
-    private var mLButton: Button? = null
-    private var mRButton: Button? = null
-    private var mReverseButton: Button? = null
-    private var mChannelSelect: ToggleButton? = null
     private var menu: Menu? = null
     //Data throughput counter
     private var mLastTime: Long = 0
@@ -166,7 +157,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             val yTF = DataChannel.getIndexOfLargest(outputScores)
             Log.i(TAG, "CALL#" + mNumberOfClassifierCalls.toString() + ":\n" +
                     "TF outputScores: " + Arrays.toString(outputScores))
-            val s = "SSVEP cPSDA\n [" + yTF.toString() + "]"
+            val s = "CNN Output Class: [" + 0.toString() + "]"
             runOnUiThread { mYfitTextView!!.text = s }
             mNumberOfClassifierCalls++
             executeWheelchairCommand(yTF)
@@ -184,8 +175,13 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             }
             mNumberOfClassifierCalls++
             Log.e(TAG, "Classifier Output: [#" + mNumberOfClassifierCalls.toString() + "::" + y[0].toString() + "," + y[1].toString() + "]")
-            val s = "SSVEP cPSDA\n: [" + y[1].toString() + "]"
-            runOnUiThread { mYfitTextView!!.text = s }
+            val s = "CNN Output Class: [" + 0.toString() + "]"
+            runOnUiThread {
+                mYfitTextView!!.text = s
+                mBatteryLevel!!.setTextColor(Color.GREEN)
+                mBatteryLevel!!.setTypeface(null, Typeface.BOLD)
+                mBatteryLevel!!.text = "Battery Level: 76%"
+            }
             executeWheelchairCommand(y[1].toInt())
         }
     }
@@ -222,10 +218,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         //Set up TextViews
         val mExportButton = findViewById<Button>(R.id.button_export)
         mBatteryLevel = findViewById(R.id.batteryText)
-        mTrainingInstructions = findViewById(R.id.trainingInstructions)
-        updateTrainingView(mRunTrainingBool)
-        mDataRate = findViewById(R.id.dataRate)
-        mDataRate!!.text = "..."
         mYfitTextView = findViewById(R.id.textViewYfit)
         val ab = getActionBar()
         ab!!.title = mDeviceName
@@ -233,77 +225,11 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         //Initialize Bluetooth
         if (!mBleInitializedBoolean) initializeBluetoothArray()
         mMediaBeep = MediaPlayer.create(this, R.raw.beep_01a)
-        mSButton = findViewById(R.id.buttonS)
-        mFButton = findViewById(R.id.buttonF)
-        mLButton = findViewById(R.id.buttonL)
-        mRButton = findViewById(R.id.buttonR)
-        mReverseButton = findViewById(R.id.buttonReverse)
-        val mTensorflowSwitch = findViewById<Switch>(R.id.tensorflowClassificationSwitch)
-        changeUIElementVisibility(false)
         mLastTime = System.currentTimeMillis()
-        mSSVEPClassTextView = findViewById(R.id.eegClassTextView)
         mOutputScoresNames = arrayOf(OUTPUT_DATA_FEED)
 
         //UI Listeners
-        val toggleButton1 = findViewById<ToggleButton>(R.id.toggleButtonWheelchairControl)
-        toggleButton1.setOnCheckedChangeListener { _, b ->
-            mWheelchairControl = b
-            executeWheelchairCommand(0)
-            changeUIElementVisibility(b)
-            mFilterData = b
-            mPacketBuffer = if (b) {
-                9
-            } else {
-                1
-            }
-            mCh1?.resetBuffers()
-            mCh2?.resetBuffers()
-        }
-        mChannelSelect = findViewById(R.id.toggleButtonCh1)
-        mChannelSelect!!.setOnCheckedChangeListener { _, b ->
-            if (b) {
-                mGraphAdapterCh2!!.clearPlot()
-            } else {
-                mGraphAdapterCh1!!.clearPlot()
-            }
-            mGraphAdapterCh1!!.plotData = b
-            mGraphAdapterCh2!!.plotData = !b
-        }
-        mTensorflowSwitch.setOnCheckedChangeListener { _, b ->
-            if (b) {
-                showNoticeDialog()
-            } else {
-                //Reset counter:
-                mTFRunModel = false
-                mNumberOfClassifierCalls = 1
-                Toast.makeText(applicationContext, "Using PSD Analysis", Toast.LENGTH_SHORT).show()
-            }
-        }
-        mSButton!!.setOnClickListener {
-            executeWheelchairCommand(0)
-        }
-        mFButton!!.setOnClickListener {
-            //            executeWheelchairCommand(1)
-            executeWheelchairCommand(4)
-        }
-        mLButton!!.setOnClickListener {
-            //            executeWheelchairCommand(2)
-            executeWheelchairCommand(3)
-        }
-        mRButton!!.setOnClickListener {
-            executeWheelchairCommand(2)
-//            executeWheelchairCommand(3)
-        }
-        mReverseButton!!.setOnClickListener {
-            //            executeWheelchairCommand(4)
-            executeWheelchairCommand(0)
-        }
         mExportButton.setOnClickListener { exportData() }
-        writeNewSettings.setOnClickListener {
-            //only read 2-ch datas
-            val bytes = ADS1299_DEFAULT_BYTE_CONFIG
-            writeNewADS1299Settings(bytes)
-        }
         mARService = intent.getParcelableExtra(MainActivity.EXTRA_DRONE_SERVICE)
         if (mARService != null) {
             mJSDrone = JSDrone(this, mARService!!)
@@ -372,12 +298,10 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                 Log.i(TAG, "Tensorflow: customModel loaded")
             }
             embeddedModel.exists() -> { //Check if there's a model included:
-                tensorflowClassificationSwitch.isChecked = false
                 mTFRunModel = false
                 Toast.makeText(applicationContext, "No TF Model Found!", Toast.LENGTH_LONG).show()
             }
             else -> { // No model found, continuing with original (reset switch)
-                tensorflowClassificationSwitch.isChecked = false
                 mTFRunModel = false
                 Toast.makeText(applicationContext, "No TF Model Found!", Toast.LENGTH_LONG).show()
             }
@@ -714,7 +638,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             mFreqDomainPlotAdapter!!.setXyPlotVisibility(showPSDA)
             mFreqDomainPlotAdapter!!.xyPlot?.redraw()
             mTimeDomainPlotAdapter!!.xyPlot?.redraw()
-            mChannelSelect!!.isChecked = chSel
             mGraphAdapterCh1!!.plotData = chSel
             mGraphAdapterCh2!!.plotData = !chSel
             if (longPSDA) {
@@ -726,7 +649,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             }
             mWheelchairControl = showUIElements
             executeWheelchairCommand(0)
-            changeUIElementVisibility(showUIElements)
         }
         super.onActivityResult(requestCode, resultCode, data)
     }
@@ -810,17 +732,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             }
             //Run process only once:
             mActBle?.runProcess()
-        }
-    }
-
-    private fun changeUIElementVisibility(visible: Boolean) {
-        val viewVisibility = if (visible) View.VISIBLE else View.INVISIBLE
-        runOnUiThread {
-            mSButton!!.visibility = viewVisibility
-            mFButton!!.visibility = viewVisibility
-            mLButton!!.visibility = viewVisibility
-            mRButton!!.visibility = viewVisibility
-            mReverseButton!!.visibility = viewVisibility
         }
     }
 
@@ -945,7 +856,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
 
         runOnUiThread {
             val concat = "C:[$mSSVEPClass]"
-            mSSVEPClassTextView!!.text = concat
         }
     }
 
@@ -967,11 +877,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                         graphAdapter!!.addDataPointTimeDomain(DataChannel.bytesToDouble(dataChannel.dataBuffer!![3 * i],
                                 dataChannel.dataBuffer!![3 * i + 1], dataChannel.dataBuffer!![3 * i + 2]),
                                 dataChannel.totalDataPointsReceived - dataChannel.dataBuffer!!.size / 3 + i)
-                        if (updateTrainingRoutine) {
-                            for (j in 0 until graphAdapter.sampleRate / 250) {
-                                updateTrainingRoutine(dataChannel.totalDataPointsReceived - dataChannel.dataBuffer!!.size / 3 + i + j)
-                            }
-                        }
                         i += graphAdapter.sampleRate / 250
                     }
                 } else if (mPrimarySaveDataFile!!.resolutionBits == 16) {
@@ -980,11 +885,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                         graphAdapter!!.addDataPointTimeDomain(DataChannel.bytesToDouble(dataChannel.dataBuffer!![2 * i],
                                 dataChannel.dataBuffer!![2 * i + 1]),
                                 dataChannel.totalDataPointsReceived - dataChannel.dataBuffer!!.size / 2 + i)
-                        if (updateTrainingRoutine) {
-                            for (j in 0 until graphAdapter.sampleRate / 250) {
-                                updateTrainingRoutine(dataChannel.totalDataPointsReceived - dataChannel.dataBuffer!!.size / 2 + i + j)
-                            }
-                        }
                         i += graphAdapter.sampleRate / 250
                     }
                 }
@@ -995,67 +895,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
 
     private val mPowerSpectrumRunnableThread = Runnable {
         runPowerSpectrum()
-    }
-
-    private fun updateTrainingRoutine(dataPoints: Int) {
-        if (dataPoints % mSampleRate == 0 && mRunTrainingBool) {
-            val second = dataPoints / mSampleRate
-            val mSDS = mStimulusDelaySeconds.toInt()
-            Log.d(TAG, "mSDS:" + mSDS.toString() + " second: " + second.toString())
-            if (second % mSDS == 0) mMediaBeep.start()
-            when {
-                (second < mSDS) -> {
-                    updateTrainingPromptColor(Color.GREEN)
-                    mSSVEPClass = 0.0
-                    updateTrainingPrompt("EYES CLOSED")
-                }
-                (second == mSDS) -> {
-                    mSSVEPClass = 1.0
-                    updateTrainingPrompt("11.1Hz")
-                }
-                (second == 2 * mSDS) -> {
-                    mSSVEPClass = 2.0
-                    updateTrainingPrompt("12.5hz")
-                }
-                (second == 3 * mSDS) -> {
-                    mSSVEPClass = 3.0
-                    updateTrainingPrompt("15.2Hz")
-                }
-                (second == 4 * mSDS) -> {
-                    mSSVEPClass = 4.0
-                    updateTrainingPrompt("16.7Hz")
-                }
-                (second == 5 * mSDS) -> {
-                    mSSVEPClass = 0.0
-                    updateTrainingPrompt("Stop!")
-                    updateTrainingPromptColor(Color.RED)
-                    disconnectAllBLE()
-                }
-                (second == 6 * mSDS) -> {
-                }
-            }
-        }
-    }
-
-    private fun updateTrainingPrompt(prompt: String) {
-        runOnUiThread {
-            if (mRunTrainingBool) {
-                mTrainingInstructions!!.text = prompt
-            }
-        }
-    }
-
-    private fun updateTrainingView(b: Boolean) {
-        val visibility = if (b) View.VISIBLE else View.GONE
-        runOnUiThread { mTrainingInstructions!!.visibility = visibility }
-    }
-
-    private fun updateTrainingPromptColor(color: Int) {
-        runOnUiThread {
-            if (mRunTrainingBool) {
-                mTrainingInstructions!!.setTextColor(color)
-            }
-        }
     }
 
     private fun executeDroneCommand(command: Int) {
@@ -1169,7 +1008,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             Log.e(" DataRate:", dataRate.toString() + " Bytes/s")
             runOnUiThread {
                 val s = dataRate.toString() + " Bytes/s"
-                mDataRate!!.text = s
             }
         }
     }
@@ -1192,8 +1030,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                 updateConnectionState(getString(R.string.connected))
                 invalidateOptionsMenu()
                 runOnUiThread {
-                    mDataRate!!.setTextColor(Color.BLACK)
-                    mDataRate!!.setTypeface(null, Typeface.NORMAL)
                 }
                 //Start the service discovery:
                 gatt.discoverServices()
@@ -1212,11 +1048,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                     }
                 }
                 Log.i(TAG, "Disconnected")
-                runOnUiThread {
-                    mDataRate!!.setTextColor(Color.RED)
-                    mDataRate!!.setTypeface(null, Typeface.BOLD)
-                    mDataRate!!.text = HZ
-                }
                 updateConnectionState(getString(R.string.disconnected))
                 stopMonitoringRssiValue()
                 invalidateOptionsMenu()
