@@ -67,7 +67,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
     private var mEEGConfigGattService: BluetoothGattService? = null
     private var mWheelchairGattIndex: Int = 0
     private var mEEGConfigGattIndex: Int = 0
-    private var mEEGConnectedAllChannels = false
     // Classification
     private var mNumber2ChPackets = -1
     private var mNumberOfClassifierCalls = 0
@@ -506,12 +505,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             mTimeDomainPlotAdapter!!.xyPlot!!.addSeries(mGraphAdapterCh1!!.series, mGraphAdapterCh1!!.lineAndPointFormatter)
             mTimeDomainPlotAdapter!!.xyPlot!!.addSeries(mGraphAdapterCh2!!.series, mGraphAdapterCh2!!.lineAndPointFormatter)
         }
-        mFreqDomainPlotAdapter = XYPlotAdapter(findViewById(R.id.frequencyAnalysisXYPlot), "Frequency (Hz)", "Power Density (W/Hz)", mSampleRate.toDouble() / 125.0)
-        if (mFreqDomainPlotAdapter!!.xyPlot != null) {
-            mFreqDomainPlotAdapter!!.xyPlot!!.addSeries(mGraphAdapterCh1PSDA!!.series, mGraphAdapterCh1PSDA!!.lineAndPointFormatter)
-            mFreqDomainPlotAdapter!!.xyPlot!!.addSeries(mGraphAdapterCh2PSDA!!.series, mGraphAdapterCh2PSDA!!.lineAndPointFormatter)
-        }
-        val xyPlotList = listOf(mTimeDomainPlotAdapter!!.xyPlot, mFreqDomainPlotAdapter!!.xyPlot)
+        val xyPlotList = listOf(mTimeDomainPlotAdapter!!.xyPlot)
         mRedrawer = Redrawer(xyPlotList, 30f, false)
         mRedrawer!!.start()
         mGraphInitializedBoolean = true
@@ -711,8 +705,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
 
             mGraphAdapterCh1PSDA!!.plotData = showPSDA
             mGraphAdapterCh2PSDA!!.plotData = showPSDA
-            mFreqDomainPlotAdapter!!.setXyPlotVisibility(showPSDA)
-            mFreqDomainPlotAdapter!!.xyPlot?.redraw()
             mTimeDomainPlotAdapter!!.xyPlot?.redraw()
             mChannelSelect!!.isChecked = chSel
             mGraphAdapterCh1!!.plotData = chSel
@@ -878,12 +870,11 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                 mCh1!!.chEnabled = true
             }
             getDataRateBytes(mNewEEGdataBytes.size)
-            if (mEEGConnectedAllChannels) {
-                mCh1!!.handleNewData(mNewEEGdataBytes)
-                if (mCh1!!.packetCounter.toInt() == mPacketBuffer) {
-                    addToGraphBuffer(mCh1!!, mGraphAdapterCh1, true)
-                }
+            mCh1!!.handleNewData(mNewEEGdataBytes)
+            if (mCh1!!.packetCounter.toInt() == mPacketBuffer) {
+                addToGraphBuffer(mCh1!!, mGraphAdapterCh1, true)
             }
+            mPrimarySaveDataFile!!.writeToDisk(mCh1!!.characteristicDataPacketBytes)
         }
 
         if (AppConstant.CHAR_EEG_CH2_SIGNAL == characteristic.uuid) {
@@ -893,11 +884,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             val mNewEEGdataBytes = characteristic.value
             val byteLength = mNewEEGdataBytes.size
             getDataRateBytes(byteLength)
-            if (mEEGConnectedAllChannels) {
-                mCh2!!.handleNewData(mNewEEGdataBytes)
-                if (mCh2!!.packetCounter.toInt() == mPacketBuffer) {
-                    addToGraphBuffer(mCh2!!, mGraphAdapterCh2, false)
-                }
+            mCh2!!.handleNewData(mNewEEGdataBytes)
+            if (mCh2!!.packetCounter.toInt() == mPacketBuffer) {
+                addToGraphBuffer(mCh2!!, mGraphAdapterCh2, false)
             }
         }
 
@@ -927,12 +916,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
 
         if (mCh1!!.chEnabled && mCh2!!.chEnabled) {
             mNumber2ChPackets++
-            mEEGConnectedAllChannels = true
             mCh1!!.chEnabled = false
             mCh2!!.chEnabled = false
-            if (mCh1!!.characteristicDataPacketBytes != null && mCh2!!.characteristicDataPacketBytes != null) {
-                mPrimarySaveDataFile!!.writeToDisk(mCh1!!.characteristicDataPacketBytes, mCh2!!.characteristicDataPacketBytes)
-            }
             if (mNumber2ChPackets % 20 == 0) { //Every x * 20 data points
                 val classifyTaskThread = Thread(mClassifyThread)
                 classifyTaskThread.start()
@@ -1335,10 +1320,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         mPSDDataPointsToShow = fPSDEndIndex - fPSDStartIndex
         mGraphAdapterCh1PSDA!!.setSeriesHistoryDataPoints(mPSDDataPointsToShow)
         mGraphAdapterCh2PSDA!!.setSeriesHistoryDataPoints(mPSDDataPointsToShow)
-        if (mPSDDataPointsToShow > 64)
-            mFreqDomainPlotAdapter!!.setXyPlotDomainIncrement(6.0)
-        else
-            mFreqDomainPlotAdapter!!.setXyPlotDomainIncrement(2.0)
         mGraphAdapterCh1PSDA?.series?.clear()
         mGraphAdapterCh2PSDA?.series?.clear()
         mGraphAdapterCh1PSDA!!.addDataPointsGeneric(fPSD!!, mPSDCh1, fPSDStartIndex, fPSDEndIndex)
@@ -1410,7 +1391,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         private val TAG = DeviceControlActivity::class.java.simpleName
         private var mGraphAdapterCh1PSDA: GraphAdapter? = null
         private var mGraphAdapterCh2PSDA: GraphAdapter? = null
-        private var mFreqDomainPlotAdapter: XYPlotAdapter? = null
         var mRedrawer: Redrawer? = null
         var mSSVEPClass = 0.0
         // Power Spectrum Graph Data:
