@@ -1,5 +1,6 @@
 package com.yeolabgt.mahmoodms.ssvepinterfacetf
 
+import android.renderscript.Byte3
 import com.google.common.primitives.Bytes
 
 /**
@@ -102,11 +103,15 @@ internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classifi
             return unsignedToSigned16bit(unsigned).toFloat() / 32767.0.toFloat() * 2.25.toFloat()
         }
 
+        fun bytesToInt(a1: Byte, a2: Byte, a3: Byte, a4: Byte):Int {
+            val unsigned = unsignedBytesToInt(a1, a2, a3, a4)
+            return unsignedToSigned(unsigned, 32)
+        }
+
         fun bytesToDouble(a1: Byte, a2: Byte): Double {
             val unsigned = unsignedBytesToInt(a1, a2, MSBFirst)
             return unsignedToSigned16bit(unsigned).toDouble() / 32767.0 * 2.25
         }
-
 
         fun bytesToDouble(a1: Byte, a2: Byte, a3: Byte): Double {
             val unsigned = unsignedBytesToInt(a1, a2, a3, MSBFirst)
@@ -139,14 +144,21 @@ internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classifi
                 unsignedByteToInt(b0) + (unsignedByteToInt(b1) shl 8) + (unsignedByteToInt(b2) shl 16)
         }
 
+        fun unsignedBytesToInt(b0: Byte, b1: Byte, b2: Byte, b3: Byte): Int {
+            return if (MSBFirst)
+                (unsignedByteToInt(b0) shl 24) + (unsignedByteToInt(b1) shl 16) + (unsignedByteToInt(b2) shl 8) + unsignedByteToInt(b3)
+            else
+                unsignedByteToInt(b0) + (unsignedByteToInt(b1) shl 8) + (unsignedByteToInt(b2) shl 16) + (unsignedByteToInt(b3) shl 24)
+        }
+
         private fun unsignedByteToInt(b: Byte): Int {
             return (b.toInt() and 0xFF)
         }
 
-//        private fun unsignedToSigned(unsignedInt: Int, size: Int): Int {
-//            var unsigned = unsignedInt
-//            if (unsigned and (1 shl size - 1) != 0) unsigned = -1 * ((1 shl size - 1) - (unsigned and (1 shl size - 1) - 1))
-//            return unsigned
-//        }
+        private fun unsignedToSigned(unsignedInt: Int, size: Int): Int {
+            var unsigned = unsignedInt
+            if (unsigned and (1 shl size - 1) != 0) unsigned = -1 * ((1 shl size - 1) - (unsigned and (1 shl size - 1) - 1))
+            return unsigned
+        }
     }
 }

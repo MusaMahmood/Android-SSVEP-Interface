@@ -1,13 +1,7 @@
 package com.yeolabgt.mahmoodms.ssvepinterfacetf
 
 import android.app.Activity
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothGatt
-import android.bluetooth.BluetoothGattCharacteristic
-import android.bluetooth.BluetoothGattDescriptor
-import android.bluetooth.BluetoothGattService
-import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothProfile
+import android.bluetooth.*
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -23,16 +17,17 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.WindowManager
-import android.widget.*
-
+import android.widget.Button
+import android.widget.TextView
+import android.widget.Toast
+import android.widget.ToggleButton
 import com.androidplot.util.Redrawer
 import com.yeolabgt.mahmoodms.actblelibrary.ActBle
-
+import kotlinx.android.synthetic.main.activity_device_control.*
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.experimental.and
-import kotlin.experimental.or
 
 /**
  * Created by mahmoodms on 5/31/2016.
@@ -81,7 +76,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     //Data Variables:
     private val batteryWarning = 20//
     private var dataRate: Double = 0.toDouble()
-    private var mStimulusDelaySeconds = 0.0
     //Play Sound:
     private lateinit var mMediaBeep: MediaPlayer
     //Tensorflow:
@@ -96,18 +90,16 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_device_control)
         //Set orientation of device based on screen type/size:
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         //Receive Intents:
         val intent = intent
         deviceMacAddresses = intent.getStringArrayExtra(MainActivity.INTENT_DEVICES_KEY)
         val deviceDisplayNames = intent.getStringArrayExtra(MainActivity.INTENT_DEVICES_NAMES)
-        val intentStimulusClass = intent.getStringArrayExtra(MainActivity.INTENT_DELAY_VALUE_SECONDS)
         if (intent.extras != null)
             mRunTrainingBool = intent.extras!!.getBoolean(MainActivity.INTENT_TRAIN_BOOLEAN)
         else
             Log.e(TAG, "ERROR: intent.getExtras = null")
 
-        mStimulusDelaySeconds = Integer.valueOf(intentStimulusClass[0])!!.toDouble()
         mDeviceName = deviceDisplayNames[0]
         mDeviceAddress = deviceMacAddresses!![0]
         Log.d(TAG, "Device Names: " + Arrays.toString(deviceDisplayNames))
@@ -136,15 +128,18 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         mTogglePlots = findViewById(R.id.toggleButtonCh1)
         mTogglePlots!!.setOnCheckedChangeListener { _, b ->
             if (!b) {
-                mGraphAdapterCh3?.clearPlot()
                 mGraphAdapterCh2?.clearPlot()
                 mGraphAdapterCh1?.clearPlot()
+                mGraphAdapterCh3?.clearPlot()
             }
             mGraphAdapterCh1!!.plotData = b
             mGraphAdapterCh2!!.plotData = b
             mGraphAdapterCh3!!.plotData = b
         }
         mExportButton.setOnClickListener { exportData() }
+        buttonWriteRegs.setOnClickListener {
+            writeSettingsADAS10004()
+        }
     }
 
     private fun exportData() {
@@ -210,6 +205,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             mMSBFirst = when {
                 btDeviceName == null -> false
                 btDeviceName.contains("EMG 250Hz") -> false
+                btDeviceName.contains("hrrrecg") -> true
                 btDeviceName.contains("nrf52") -> true
                 else -> false
             }
@@ -220,6 +216,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 btDeviceName.contains("2k") -> 2000
                 btDeviceName.contains("1k") -> 1000
                 btDeviceName.contains("500") -> 500
+                btDeviceName.contains("hrrrecg") -> 500
                 else -> 250
             }
             mPacketBuffer = mSampleRate / 250
@@ -228,11 +225,11 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
 
             mGraphAdapterCh1!!.setxAxisIncrementFromSampleRate(mSampleRate)
             mGraphAdapterCh2!!.setxAxisIncrementFromSampleRate(mSampleRate)
-            mGraphAdapterCh3?.setxAxisIncrementFromSampleRate(mSampleRate)
+            mGraphAdapterCh3!!.setxAxisIncrementFromSampleRate(mSampleRate)
 
             mGraphAdapterCh1!!.setSeriesHistoryDataPoints(250 * 5)
             mGraphAdapterCh2!!.setSeriesHistoryDataPoints(250 * 5)
-            mGraphAdapterCh3?.setSeriesHistoryDataPoints(250 * 5)
+            mGraphAdapterCh3!!.setSeriesHistoryDataPoints(250 * 5)
             val fileNameTimeStamped = "EOG_VergenceData_" + timeStamp + "_" + mSampleRate.toString() + "Hz"
             Log.e(TAG, "fileTimeStamp: " + fileNameTimeStamped)
             try {
@@ -251,9 +248,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
 
     private fun setupGraph() {
         // Initialize our XYPlot reference:
-        mGraphAdapterCh1 = GraphAdapter(mSampleRate * 4, "EOG Data Ch 1", false, Color.BLUE)
-        mGraphAdapterCh2 = GraphAdapter(mSampleRate * 4, "EOG Data Ch 2", false, Color.RED)
-        mGraphAdapterCh3 = GraphAdapter(mSampleRate * 4, "EOG Data Ch 3", false, Color.GREEN)
+        mGraphAdapterCh1 = GraphAdapter(mSampleRate * 4, "ECG Data Ch 1", false, Color.BLUE)
+        mGraphAdapterCh2 = GraphAdapter(mSampleRate * 4, "HR Data", false, Color.GREEN)
+        mGraphAdapterCh3 = GraphAdapter(mSampleRate * 4, "RR Data", false, Color.BLACK)
 
         //PLOT By default
         mGraphAdapterCh1!!.plotData = true
@@ -267,16 +264,15 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         if (mTimeDomainPlotAdapterCh1!!.xyPlot != null) {
             mTimeDomainPlotAdapterCh1!!.xyPlot!!.addSeries(mGraphAdapterCh1!!.series, mGraphAdapterCh1!!.lineAndPointFormatter)
         }
-        mTimeDomainPlotAdapterCh2 = XYPlotAdapter(findViewById(R.id.frequencyAnalysisXYPlot), false, 1000)
+        mTimeDomainPlotAdapterCh2 = XYPlotAdapter(findViewById(R.id.eegTimeDomainXYPlot2), false, 1000)
         if (mTimeDomainPlotAdapterCh2!!.xyPlot != null) {
             mTimeDomainPlotAdapterCh2!!.xyPlot!!.addSeries(mGraphAdapterCh2!!.series, mGraphAdapterCh2!!.lineAndPointFormatter)
         }
-        mTimeDomainPlotAdapterCh3 = XYPlotAdapter(findViewById(R.id.eogCh3XYPlot), false, 1000)
+        mTimeDomainPlotAdapterCh3 = XYPlotAdapter(findViewById(R.id.eegTimeDomainXYPlot3), false, 1000)
         if (mTimeDomainPlotAdapterCh3!!.xyPlot != null) {
-            mTimeDomainPlotAdapterCh3?.xyPlot?.addSeries(mGraphAdapterCh3?.series, mGraphAdapterCh3?.lineAndPointFormatter)
+            mTimeDomainPlotAdapterCh3!!.xyPlot!!.addSeries(mGraphAdapterCh3!!.series, mGraphAdapterCh3!!.lineAndPointFormatter)
         }
-
-        val xyPlotList = listOf(mTimeDomainPlotAdapterCh1!!.xyPlot, mTimeDomainPlotAdapterCh2!!.xyPlot, mTimeDomainPlotAdapterCh3?.xyPlot)
+        val xyPlotList = listOf(mTimeDomainPlotAdapterCh1!!.xyPlot, mTimeDomainPlotAdapterCh2!!.xyPlot, mTimeDomainPlotAdapterCh3!!.xyPlot)
         mRedrawer = Redrawer(xyPlotList, 30f, false)
         mRedrawer!!.start()
         mGraphInitializedBoolean = true
@@ -392,78 +388,22 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             /**
              * Settings for ADS1299:
              */
-            val registerConfigBytes = Arrays.copyOf(ADS1299_DEFAULT_BYTE_CONFIG, ADS1299_DEFAULT_BYTE_CONFIG.size)
-            when (PreferencesFragment.setSampleRate(context)) {
-                0 -> {
-                    registerConfigBytes[0] = 0x96.toByte()
-                }
-                1 -> {
-                    registerConfigBytes[0] = 0x95.toByte()
-                }
-                2 -> {
-                    registerConfigBytes[0] = 0x94.toByte()
-                }
-                3 -> {
-                    registerConfigBytes[0] = 0x93.toByte()
-                }
-                4 -> {
-                    registerConfigBytes[0] = 0x92.toByte()
-                }
-            }
-            val numChEnabled = PreferencesFragment.setNumberChannelsEnabled(context)
-            Log.e(TAG, "numChEnabled: " + numChEnabled.toString())
-            // Set
-            when (numChEnabled) {
-                1 -> {
-                    registerConfigBytes[12] = 0b0000_0001
-                    registerConfigBytes[13] = 0b0000_0001
-                }
-                2 -> {
-                    registerConfigBytes[12] = 0b0000_0011
-                    registerConfigBytes[13] = 0b0000_0011
-                }
-                3 -> {
-                    registerConfigBytes[12] = 0b0000_0111
-                    registerConfigBytes[13] = 0b0000_0111
-                }
-                4 -> {
-                    registerConfigBytes[12] = 0b0000_1111
-                    registerConfigBytes[13] = 0b0000_1111
-                }
-            }
-
-            //Set all to disable.
-            for (i in 4..7) registerConfigBytes[i] = 0xE1.toByte()
-            Log.e(TAG, "SettingsNew0: " + DataChannel.byteArrayToHexString(registerConfigBytes))
-            for (i in 4..(3 + numChEnabled)) {
-                registerConfigBytes[i] = 0x00.toByte()
-            }
-            Log.e(TAG, "SettingsNew1: " + DataChannel.byteArrayToHexString(registerConfigBytes))
-            val gain12 = PreferencesFragment.setGainCh12(context) //Check if ch enabled first
-            for (i in 4..5) { //Checks first bit enabled on chs 1 & 2.
-                registerConfigBytes[i] = when (registerConfigBytes[i] and 0x80.toByte()) {
-                    0x80.toByte() -> registerConfigBytes[i] // do nothing if ch disabled
-                    else -> registerConfigBytes[i] or (gain12 shl 4).toByte() // Shift gain into 0xxx_0000 position
-                }
-            }
-            if (PreferencesFragment.setSRB1(context)) {
-                registerConfigBytes[20] = 0x20.toByte()
-                registerConfigBytes[13] = 0b0000_0000 // Turn off BIAS_SENSN with SRB 1
-            } else {
-                registerConfigBytes[20] = 0x00.toByte()
-            }
-            Log.e(TAG, "SettingsNew: " + DataChannel.byteArrayToHexString(registerConfigBytes))
-            writeNewADS1299Settings(registerConfigBytes)
         }
         super.onActivityResult(requestCode, resultCode, data)
     }
 
-    private fun writeNewADS1299Settings(bytes: ByteArray) {
-        Log.e(TAG, "bytesOriginal: " + DataChannel.byteArrayToHexString(ADS1299_DEFAULT_BYTE_CONFIG))
+    private fun writeSettingsADAS10004(/*bytes: ByteArray*/) {
+        val bytes = ByteArray(ADAS1000_4_DEFAULT_CONFIG.size * 4)
+        for (i in ADAS1000_4_DEFAULT_CONFIG.indices) {
+            val byteInt = splitIntIntoByteArray(Integer.reverseBytes(ADAS1000_4_DEFAULT_CONFIG[i]))
+            System.arraycopy(byteInt, 0, bytes, 4*i, 4)
+        }
         if (mEEGConfigGattService != null) {
-            Log.e(TAG, "SendingCommand (byte): " + DataChannel.byteArrayToHexString(bytes))
+            Log.e(TAG, "SendingCommand (byte): " + bytesToHex(bytes))
+            //TODO: Fix this
             mActBle!!.writeCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), bytes)
             //Should notify/update after writing
+            mActBle!!.readCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG))
         }
     }
 
@@ -552,13 +492,42 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             if (AppConstant.CHAR_EEG_CONFIG == characteristic.uuid) {
                 if (characteristic.value != null) {
                     val readValue = characteristic.value
-                    Log.e(TAG, "onCharacteriticRead: \n" +
-                            "CHAR_EEG_CONFIG: " + DataChannel.byteArrayToHexString(readValue))
+                    Log.e(TAG, "onCharacteriticRead: CHAR_EEG_CONFIG: " + bytesToHex(readValue))
+                    for (i in 0 until readValue.size / 4) {
+                        val regBytes = ByteArray(4)
+                        System.arraycopy(readValue, 4 * i, regBytes, 0, 4)
+                        // Reverse byte order
+                        val int = DataChannel.unsignedBytesToInt(regBytes[0], regBytes[1], regBytes[2], regBytes[3])
+                        Log.e(TAG, "CHAR_EEG_CONFIG (int): $i: ${bytesToHex(regBytes)} = $int")
+                        val intReversed = Integer.reverseBytes(int)
+                        val reverseRegBytes = splitIntIntoByteArray(intReversed)
+                        Log.e(TAG, "CHAR_EEG_CONFIG (byt): $i: ${bytesToHex(reverseRegBytes)} = $intReversed")
+                    }
                 }
             }
         } else {
             Log.e(TAG, "onCharacteristic Read Error" + status)
         }
+    }
+
+    fun splitIntIntoByteArray(int: Int): ByteArray {
+        val bytes = ByteArray(4)
+        bytes[3] = (int and 0xFF).toByte()
+        bytes[2] = ((int shr 8) and 0xFF).toByte()
+        bytes[1] = ((int shr 16) and 0xFF).toByte()
+        bytes[0] = ((int shr 24) and 0xFF).toByte()
+        return bytes
+    }
+
+    private val hexArray = "0123456789ABCDEF".toCharArray()
+    fun bytesToHex(bytes: ByteArray): String {
+        val hexChars = CharArray(bytes.size * 2)
+        for (j in bytes.indices) {
+            val v = bytes[j].toInt() and 0xFF
+            hexChars[j * 2] = hexArray[v.ushr(4)]
+            hexChars[j * 2 + 1] = hexArray[v and 0x0F]
+        }
+        return String(hexChars)
     }
 
     override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
@@ -636,9 +605,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             mCh1!!.chEnabled = false
             mCh2!!.chEnabled = false
             mCh3!!.chEnabled = false
-            if (mCh1!!.characteristicDataPacketBytes != null &&
-                    mCh2!!.characteristicDataPacketBytes != null &&
-                    mCh3!!.characteristicDataPacketBytes != null) {
+            if (mCh1!!.characteristicDataPacketBytes != null && mCh2!!.characteristicDataPacketBytes != null && mCh3!!.characteristicDataPacketBytes != null) {
                 mPrimarySaveDataFile!!.writeToDisk(mCh1?.characteristicDataPacketBytes,
                         mCh2?.characteristicDataPacketBytes, mCh3?.characteristicDataPacketBytes)
             }
@@ -856,13 +823,11 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         //Save Data File
         private var mPrimarySaveDataFile: SaveDataFile? = null
         //Tensorflow CONSTANTS:
-        val ADS1299_DEFAULT_BYTE_CONFIG = byteArrayOf(
-                0x96.toByte(), 0xD0.toByte(), 0xEC.toByte(), 0x00.toByte(), //CONFIG1-3, LOFF
-                0x40.toByte(), 0x40.toByte(), 0xE1.toByte(), 0xE1.toByte(), //CHSET 1-4
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), //CHSET 5-8
-                0x0F.toByte(), 0x0F.toByte(), // BIAS_SENSP/N
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), // LOFF_P/N (IGNORE)
-                0x0F.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()) //GPIO, MISC1 (0x20 for SRB1), MISC2, CONFIG4
+        val ADAS1000_4_DEFAULT_CONFIG = intArrayOf(0x85A0000A.toInt(),
+                0x8A1F8E08.toInt(), 0x81A004C6.toInt(),
+                0x83002019.toInt(), 0x84000E01.toInt(),
+                0x87242424.toInt(), 0x8E000000.toInt(),
+                0x8F000000.toInt(), 0x40000000)
 
         //Note for companion object: JNI call must include Companion in call: e.g. package_class_Companion_function(...).
         //TODO: Still does not work when I try to call from the companion object.

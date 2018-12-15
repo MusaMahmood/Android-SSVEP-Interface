@@ -37,6 +37,14 @@
             android:textSize="15sp" />
 
         <Button
+            android:id="@+id/buttonWriteRegs"
+            style="?android:attr/buttonStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.1"
+            android:text="Regs" />
+
+        <Button
             android:id="@+id/button_export"
             style="?android:attr/buttonStyleSmall"
             android:layout_width="wrap_content"
@@ -51,28 +59,28 @@
         android:layout_width="fill_parent"
         android:layout_height="match_parent"
         android:gravity="center"
-        android:orientation="horizontal">
+        android:orientation="vertical">
 
         <com.androidplot.xy.XYPlot
             android:id="@+id/eegTimeDomainXYPlot"
             style="@style/APFullScreenGraph.Light.Minimalist"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="fill_parent"
             android:layout_weight="1"
             ap:renderMode="use_background_thread" />
 
         <com.androidplot.xy.XYPlot
-            android:id="@+id/frequencyAnalysisXYPlot"
-            style="@style/APFullScreenGraph.Light"
-            android:layout_width="0dp"
+            android:id="@+id/eegTimeDomainXYPlot2"
+            style="@style/APFullScreenGraph.Light.Minimalist"
+            android:layout_width="match_parent"
             android:layout_height="fill_parent"
             android:layout_weight="1"
             ap:renderMode="use_background_thread" />
 
         <com.androidplot.xy.XYPlot
-            android:id="@+id/eogCh3XYPlot"
-            style="@style/APFullScreenGraph.Light"
-            android:layout_width="0dp"
+            android:id="@+id/eegTimeDomainXYPlot3"
+            style="@style/APFullScreenGraph.Light.Minimalist"
+            android:layout_width="match_parent"
             android:layout_height="fill_parent"
             android:layout_weight="1"
             ap:renderMode="use_background_thread" />
