@@ -190,12 +190,12 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             Toast.makeText(this, "No Devices Queued, Restart!", Toast.LENGTH_SHORT).show()
         }
         mActBle = ActBle(this, mBluetoothManager, this)
-        mBluetoothGattArray = Array(deviceMacAddresses!!.size, { i -> mActBle!!.connect(mBluetoothDeviceArray[i]) })
+        mBluetoothGattArray = Array(deviceMacAddresses!!.size) { i -> mActBle!!.connect(mBluetoothDeviceArray[i]) }
         for (i in mBluetoothDeviceArray.indices) {
             Log.e(TAG, "Connecting to Device: Name: " + (mBluetoothDeviceArray[i]!!.name + " \nMAC:" + mBluetoothDeviceArray[i]!!.address))
             if ("WheelchairControl" == mBluetoothDeviceArray[i]!!.name) {
                 mWheelchairGattIndex = i
-                Log.e(TAG, "mWheelchairGattIndex: " + mWheelchairGattIndex)
+                Log.e(TAG, "mWheelchairGattIndex: $mWheelchairGattIndex")
                 continue //we are done initializing
             } else {
                 mEEGConfigGattIndex = i
@@ -231,7 +231,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             mGraphAdapterCh2!!.setSeriesHistoryDataPoints(250 * 5)
             mGraphAdapterCh3!!.setSeriesHistoryDataPoints(250 * 5)
             val fileNameTimeStamped = "EOG_VergenceData_" + timeStamp + "_" + mSampleRate.toString() + "Hz"
-            Log.e(TAG, "fileTimeStamp: " + fileNameTimeStamped)
+            Log.e(TAG, "fileTimeStamp: $fileNameTimeStamped")
             try {
                 mPrimarySaveDataFile = SaveDataFile("/EOGData", fileNameTimeStamped,
                         24, 1.toDouble() / mSampleRate)
@@ -400,7 +400,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         }
         if (mEEGConfigGattService != null) {
             Log.e(TAG, "SendingCommand (byte): " + bytesToHex(bytes))
-            //TODO: Fix this
             mActBle!!.writeCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), bytes)
             //Should notify/update after writing
             mActBle!!.readCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG))
@@ -485,7 +484,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 if (characteristic.value != null) {
                     val batteryLevel = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0)
                     updateBatteryStatus(batteryLevel)
-                    Log.i(TAG, "Battery Level :: " + batteryLevel)
+                    Log.i(TAG, "Battery Level :: $batteryLevel")
                 }
             }
             //TODO: NEED TO CHANGE mSampleRate, DataChannel[], and GraphAdapter[] here.
@@ -506,11 +505,11 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 }
             }
         } else {
-            Log.e(TAG, "onCharacteristic Read Error" + status)
+            Log.e(TAG, "onCharacteristic Read Error$status")
         }
     }
 
-    fun splitIntIntoByteArray(int: Int): ByteArray {
+    private fun splitIntIntoByteArray(int: Int): ByteArray {
         val bytes = ByteArray(4)
         bytes[3] = (int and 0xFF).toByte()
         bytes[2] = ((int shr 8) and 0xFF).toByte()
@@ -520,7 +519,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     }
 
     private val hexArray = "0123456789ABCDEF".toCharArray()
-    fun bytesToHex(bytes: ByteArray): String {
+    private fun bytesToHex(bytes: ByteArray): String {
         val hexChars = CharArray(bytes.size * 2)
         for (j in bytes.indices) {
             val v = bytes[j].toInt() and 0xFF
@@ -743,17 +742,17 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     }
 
     override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
-        Log.i(TAG, "onCharacteristicWrite :: Status:: " + status)
+        Log.i(TAG, "onCharacteristicWrite :: Status:: $status")
     }
 
     override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {}
 
     override fun onDescriptorRead(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
-        Log.i(TAG, "onDescriptorRead :: Status:: " + status)
+        Log.i(TAG, "onDescriptorRead :: Status:: $status")
     }
 
     override fun onError(errorMessage: String) {
-        Log.e(TAG, "Error:: " + errorMessage)
+        Log.e(TAG, "Error:: $errorMessage")
     }
 
     private fun updateConnectionState(status: String) {
@@ -783,7 +782,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             if (finalPercent <= batteryWarning) {
                 mBatteryLevel!!.setTextColor(Color.RED)
                 mBatteryLevel!!.setTypeface(null, Typeface.BOLD)
-                Toast.makeText(applicationContext, "Charge Battery, Battery Low " + status, Toast.LENGTH_SHORT).show()
+                Toast.makeText(applicationContext, "Charge Battery, Battery Low $status", Toast.LENGTH_SHORT).show()
             } else {
                 mBatteryLevel!!.setTextColor(Color.GREEN)
                 mBatteryLevel!!.setTypeface(null, Typeface.BOLD)
@@ -809,7 +808,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     }
 
     companion object {
-        val HZ = "0 Hz"
+        const val HZ = "0 Hz"
         private val TAG = DeviceControlActivity::class.java.simpleName
         var mRedrawer: Redrawer? = null
         // Power Spectrum Graph Data:
@@ -819,18 +818,17 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         internal var mFilterData = false
         private var mPacketBuffer = 6
         //RSSI:
-        private val RSSI_UPDATE_TIME_INTERVAL = 2000
+        private const val RSSI_UPDATE_TIME_INTERVAL = 2000
         //Save Data File
         private var mPrimarySaveDataFile: SaveDataFile? = null
         //Tensorflow CONSTANTS:
-        val ADAS1000_4_DEFAULT_CONFIG = intArrayOf(0x85A0000A.toInt(),
-                0x8A1F8E08.toInt(), 0x81A004C6.toInt(),
-                0x83002019.toInt(), 0x84000E01.toInt(),
-                0x87242424.toInt(), 0x8E000000.toInt(),
-                0x8F000000.toInt(), 0x40000000)
+        val ADAS1000_4_DEFAULT_CONFIG = intArrayOf(
+                0x85A0000A.toInt(), 0x8A1F8E08.toInt(),
+                0x81A004CE.toInt(), 0x83002001.toInt(),
+                0x84000E01.toInt(), 0x87242424.toInt(),
+                0x8E000000.toInt(), 0x8F000000.toInt(),
+                0x40000000)
 
-        //Note for companion object: JNI call must include Companion in call: e.g. package_class_Companion_function(...).
-        //TODO: Still does not work when I try to call from the companion object.
         init {
             System.loadLibrary("ssvep-lib")
         }

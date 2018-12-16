@@ -115,7 +115,8 @@ internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classifi
 
         fun bytesToDouble(a1: Byte, a2: Byte, a3: Byte): Double {
             val unsigned = unsignedBytesToInt(a1, a2, a3, MSBFirst)
-            return unsignedToSigned24bit(unsigned).toDouble() / 8388607.0 * 2.25
+            // For ADAS Device:
+            return unsignedToSigned24bit(unsigned).toDouble() * (4*(1.8/1.4)) / (16777216 - 1).toDouble()
         }
 
         private fun unsignedToSigned16bit(unsigned: Int): Int {
