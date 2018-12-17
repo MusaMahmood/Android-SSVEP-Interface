@@ -85,6 +85,16 @@
             android:layout_weight="1"
             ap:renderMode="use_background_thread" />
 
+        <EditText
+            android:id="@+id/adasConfigEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ems="72"
+            android:inputType="textPersonName"
+            android:selectAllOnFocus="false"
+            android:text="@string/editTextPlaceholder"
+            android:textSize="10sp" />
+
     </LinearLayout>
 
 </LinearLayout>

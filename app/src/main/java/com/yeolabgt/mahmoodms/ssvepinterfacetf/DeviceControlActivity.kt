@@ -22,11 +22,13 @@ import android.widget.TextView
 import android.widget.Toast
 import android.widget.ToggleButton
 import com.androidplot.util.Redrawer
+import com.google.common.base.Splitter
 import com.yeolabgt.mahmoodms.actblelibrary.ActBle
 import kotlinx.android.synthetic.main.activity_device_control.*
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.experimental.and
 
 /**
@@ -138,7 +140,14 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         }
         mExportButton.setOnClickListener { exportData() }
         buttonWriteRegs.setOnClickListener {
-            writeSettingsADAS10004()
+            val adasConfig = adasConfigEditText.text.toString()
+            val sArray = Splitter.fixedLength(8).split(adasConfig)
+            val adasConfigIntArray = ArrayList<Int>()
+            for (s in sArray) {
+                Log.i(TAG, s)
+                adasConfigIntArray.add(java.lang.Long.parseLong(s, 16).toInt())
+            }
+            writeSettingsADAS10004(adasConfigIntArray.toIntArray())
         }
     }
 
@@ -392,14 +401,14 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         super.onActivityResult(requestCode, resultCode, data)
     }
 
-    private fun writeSettingsADAS10004(/*bytes: ByteArray*/) {
-        val bytes = ByteArray(ADAS1000_4_DEFAULT_CONFIG.size * 4)
-        for (i in ADAS1000_4_DEFAULT_CONFIG.indices) {
-            val byteInt = splitIntIntoByteArray(Integer.reverseBytes(ADAS1000_4_DEFAULT_CONFIG[i]))
+    private fun writeSettingsADAS10004(intArray: IntArray) {
+        val bytes = ByteArray(intArray.size * 4)
+        for (i in intArray.indices) {
+            val byteInt = splitIntIntoByteArray(Integer.reverseBytes(intArray[i]))
             System.arraycopy(byteInt, 0, bytes, 4*i, 4)
         }
         if (mEEGConfigGattService != null) {
-            Log.e(TAG, "SendingCommand (byte): " + bytesToHex(bytes))
+            Log.e(TAG, "ADAS Config Registers: 0x" + bytesToHex(bytes))
             mActBle!!.writeCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG), bytes)
             //Should notify/update after writing
             mActBle!!.readCharacteristic(mBluetoothGattArray[mEEGConfigGattIndex]!!, mEEGConfigGattService!!.getCharacteristic(AppConstant.CHAR_EEG_CONFIG))
