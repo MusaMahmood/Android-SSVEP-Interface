@@ -239,10 +239,10 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             mGraphAdapterCh1!!.setSeriesHistoryDataPoints(250 * 5)
             mGraphAdapterCh2!!.setSeriesHistoryDataPoints(250 * 5)
             mGraphAdapterCh3!!.setSeriesHistoryDataPoints(250 * 5)
-            val fileNameTimeStamped = "EOG_VergenceData_" + timeStamp + "_" + mSampleRate.toString() + "Hz"
+            val fileNameTimeStamped = "ECGHRRR_" + timeStamp + "_" + mSampleRate.toString() + "Hz"
             Log.e(TAG, "fileTimeStamp: $fileNameTimeStamped")
             try {
-                mPrimarySaveDataFile = SaveDataFile("/EOGData", fileNameTimeStamped,
+                mPrimarySaveDataFile = SaveDataFile("/ECGHRRR", fileNameTimeStamped,
                         24, 1.toDouble() / mSampleRate)
             } catch (e: IOException) {
                 Log.e(TAG, "initializeBluetoothArray: IOException", e)
