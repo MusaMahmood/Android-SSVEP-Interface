@@ -18,5 +18,5 @@
     <string name="menu_rssi">-RSSI-</string>
     <string name="action_settings">Settings</string>
     <string name="action_export">Export</string>
-    <string name="editTextPlaceholder">85A0000A8A1F8E0881A004CE8300200184000E01872424248E0000008F00000040000000</string>
+    <string name="editTextPlaceholder">85A0000A8A1F8E0381A004C68300201984000000870000008E0000008F00000040000000</string>
 </resources>

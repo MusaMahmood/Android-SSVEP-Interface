@@ -47,7 +47,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     private var mTimeDomainPlotAdapterCh3: XYPlotAdapter? = null
     private var mCh1: DataChannel? = null
     private var mCh2: DataChannel? = null
-    private var mCh3: DataChannel? = null
     //Device Information
     private var mBleInitializedBoolean = false
     private lateinit var mBluetoothGattArray: Array<BluetoothGatt?>
@@ -87,6 +86,13 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
 
     // Native Interface Function Handler:
     private val mNativeInterface = NativeInterfaceClass()
+
+    private val mClassifyThread = Runnable {
+        val hrrrArray = mNativeInterface.jGetHRRR(mCh1!!.classificationBuffer, mCh2!!.classificationBuffer)
+        val hrrrString = "HR: %1.2f bpm".format(hrrrArray[0]) +
+                "RR: %1.2f breaths/min".format(hrrrArray[1])
+        runOnUiThread { textViewHRRR.text = hrrrString }
+    }
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -225,7 +231,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 btDeviceName.contains("2k") -> 2000
                 btDeviceName.contains("1k") -> 1000
                 btDeviceName.contains("500") -> 500
-                btDeviceName.contains("hrrrecg") -> 500
+                btDeviceName.contains("hrrrecg") -> 250 // 31.25 Hz
                 else -> 250
             }
             mPacketBuffer = mSampleRate / 250
@@ -258,8 +264,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     private fun setupGraph() {
         // Initialize our XYPlot reference:
         mGraphAdapterCh1 = GraphAdapter(mSampleRate * 4, "ECG Data Ch 1", false, Color.BLUE)
-        mGraphAdapterCh2 = GraphAdapter(mSampleRate * 4, "HR Data", false, Color.GREEN)
-        mGraphAdapterCh3 = GraphAdapter(mSampleRate * 4, "RR Data", false, Color.BLACK)
+        mGraphAdapterCh2 = GraphAdapter(mSampleRate * 4, "RR Data", false, Color.GREEN)
+        mGraphAdapterCh3 = GraphAdapter(mSampleRate * 4, "HR Data", false, Color.BLACK)
 
         //PLOT By default
         mGraphAdapterCh1!!.plotData = true
@@ -462,7 +468,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                     }
                     if (service.getCharacteristic(AppConstant.CHAR_EEG_CH3_SIGNAL) != null) {
                         mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH3_SIGNAL), true)
-                        if (mCh3 == null) mCh3 = DataChannel(false, mMSBFirst, 4 * mSampleRate)
+//                        if (mCh3 == null) mCh3 = DataChannel(false, mMSBFirst, 4 * mSampleRate)
                     }
                     if (service.getCharacteristic(AppConstant.CHAR_EEG_CH4_SIGNAL) != null)
                         mActBle!!.setCharacteristicNotifications(gatt, service.getCharacteristic(AppConstant.CHAR_EEG_CH4_SIGNAL), true)
@@ -552,8 +558,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                     0x02.toByte() -> mSampleRate = 4000
                 }
                 //RESET mCH1 & mCH2:
-                mCh1?.classificationBufferSize = 4 * mSampleRate
-                mCh2?.classificationBufferSize = 4 * mSampleRate
+                mCh1?.classificationBufferSize = 1000
+                mCh2?.classificationBufferSize = 1000
                 Log.e(TAG, "Updated Sample Rate: " + mSampleRate.toString())
             }
         }
@@ -592,61 +598,31 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             }
         }
 
-        if (AppConstant.CHAR_EEG_CH3_SIGNAL == characteristic.uuid) {
-            if (!mCh3!!.chEnabled) {
-                mCh3!!.chEnabled = true
-            }
-            val mNewEEGdataBytes = characteristic.value
-            val byteLength = mNewEEGdataBytes.size
-            getDataRateBytes(byteLength)
-            if (mEEGConnectedAllChannels) {
-                mCh3!!.handleNewData(mNewEEGdataBytes)
-                if (mCh3!!.packetCounter.toInt() == mPacketBuffer) {
-                    addToGraphBuffer(mCh3!!, mGraphAdapterCh3)
-                }
-            }
-        }
-
-        if (mCh1!!.chEnabled && mCh2!!.chEnabled && mCh3!!.chEnabled) {
+        if (mCh1!!.chEnabled && mCh2!!.chEnabled) {
             mNumber2ChPackets++
             mEEGConnectedAllChannels = true
             mCh1!!.chEnabled = false
             mCh2!!.chEnabled = false
-            mCh3!!.chEnabled = false
-            if (mCh1!!.characteristicDataPacketBytes != null && mCh2!!.characteristicDataPacketBytes != null && mCh3!!.characteristicDataPacketBytes != null) {
-                mPrimarySaveDataFile!!.writeToDisk(mCh1?.characteristicDataPacketBytes,
-                        mCh2?.characteristicDataPacketBytes, mCh3?.characteristicDataPacketBytes)
+            if (mCh1!!.characteristicDataPacketBytes != null && mCh2!!.characteristicDataPacketBytes != null) {
+                mPrimarySaveDataFile!!.writeToDisk(mCh1?.characteristicDataPacketBytes, mCh2?.characteristicDataPacketBytes)
+            }
+            if (mCh1!!.dataPointCounterClassify > 500) {
+                mCh1!!.resetCounterClassify()
+                val classifyThread = Thread(mClassifyThread)
+                classifyThread.start()
             }
         }
     }
 
     private fun addToGraphBuffer(dataChannel: DataChannel, graphAdapter: GraphAdapter?) {
-        if (mFilterData && dataChannel.totalDataPointsReceived > 1000) {
-            val filteredData = mNativeInterface.jSSVEPCfilter(dataChannel.classificationBuffer)
-            graphAdapter!!.clearPlot()
-
-            for (i in filteredData.indices) { // gA.addDataPointTimeDomain(y,x)
-                graphAdapter.addDataPointTimeDomainAlt(filteredData[i].toDouble(),
-                        dataChannel.totalDataPointsReceived - 999 + i)
-            }
-        } else {
-            if (dataChannel.dataBuffer != null) {
-                if (mPrimarySaveDataFile!!.resolutionBits == 24) {
-                    var i = 0
-                    while (i < dataChannel.dataBuffer!!.size / 3) {
-                        graphAdapter!!.addDataPointTimeDomain(DataChannel.bytesToDouble(dataChannel.dataBuffer!![3 * i],
-                                dataChannel.dataBuffer!![3 * i + 1], dataChannel.dataBuffer!![3 * i + 2]),
-                                dataChannel.totalDataPointsReceived - dataChannel.dataBuffer!!.size / 3 + i)
-                        i += graphAdapter.sampleRate / 250
-                    }
-                } else if (mPrimarySaveDataFile!!.resolutionBits == 16) {
-                    var i = 0
-                    while (i < dataChannel.dataBuffer!!.size / 2) {
-                        graphAdapter!!.addDataPointTimeDomain(DataChannel.bytesToDouble(dataChannel.dataBuffer!![2 * i],
-                                dataChannel.dataBuffer!![2 * i + 1]),
-                                dataChannel.totalDataPointsReceived - dataChannel.dataBuffer!!.size / 2 + i)
-                        i += graphAdapter.sampleRate / 250
-                    }
+        if (dataChannel.dataBuffer != null) {
+            if (mPrimarySaveDataFile!!.resolutionBits == 24) {
+                var i = 0
+                while (i < dataChannel.dataBuffer!!.size / 3) {
+                    graphAdapter!!.addDataPointTimeDomain(DataChannel.bytesToDouble(dataChannel.dataBuffer!![3 * i],
+                            dataChannel.dataBuffer!![3 * i + 1], dataChannel.dataBuffer!![3 * i + 2]),
+                            dataChannel.totalDataPointsReceived - dataChannel.dataBuffer!!.size / 3 + i)
+                    i += graphAdapter.sampleRate / 250
                 }
             }
         }
@@ -830,13 +806,6 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         private const val RSSI_UPDATE_TIME_INTERVAL = 2000
         //Save Data File
         private var mPrimarySaveDataFile: SaveDataFile? = null
-        //Tensorflow CONSTANTS:
-        val ADAS1000_4_DEFAULT_CONFIG = intArrayOf(
-                0x85A0000A.toInt(), 0x8A1F8E08.toInt(),
-                0x81A004CE.toInt(), 0x83002001.toInt(),
-                0x84000E01.toInt(), 0x87242424.toInt(),
-                0x8E000000.toInt(), 0x8F000000.toInt(),
-                0x40000000)
 
         init {
             System.loadLibrary("ssvep-lib")

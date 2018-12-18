@@ -7,6 +7,12 @@
               android:background="#FFFFFF">
 
 
+    <TextView
+        android:id="@+id/textViewHRRR"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="..." />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

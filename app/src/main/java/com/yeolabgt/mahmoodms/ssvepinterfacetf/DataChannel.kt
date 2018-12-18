@@ -13,6 +13,7 @@ internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classifi
     var characteristicDataPacketBytes: ByteArray? = null
     var packetCounter: Short = 0
     var totalDataPointsReceived: Int = 0
+    var dataPointCounterClassify: Int = 0
     var dataBuffer: ByteArray? = null
     var classificationBufferSize: Int = 1000
         set(value) {
@@ -49,6 +50,7 @@ internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classifi
             addToBuffer(bytesToDouble(newDataPacket[3 * i], newDataPacket[3 * i + 1], newDataPacket[3 * i + 2]))
         }
         this.totalDataPointsReceived += newDataPacket.size / 3
+        this.dataPointCounterClassify += newDataPacket.size / 3
         this.packetCounter++
     }
 
@@ -60,6 +62,11 @@ internal class DataChannel(var chEnabled: Boolean, MSBFirst: Boolean, //Classifi
             this.classificationBufferFloats[this.classificationBufferSize - 1] = a.toFloat()
         }
     }
+
+    fun resetCounterClassify() {
+        this.dataPointCounterClassify = 0
+    }
+
 
     companion object {
         private val HEX_CHARS = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9',

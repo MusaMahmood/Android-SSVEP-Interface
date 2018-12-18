@@ -2,13 +2,13 @@
 // Academic License - for use in teaching, academic research, and meeting
 // course requirements at degree granting institutions only.  Not for
 // government, commercial, or other organizational use.
-// File: extractPowerSpectrum_types.h
+// File: get_hr_rr_types.h
 //
 // MATLAB Coder version            : 3.3
-// C/C++ source code generated on  : 05-Oct-2017 14:15:24
+// C/C++ source code generated on  : 18-Dec-2018 13:23:01
 //
-#ifndef EXTRACTPOWERSPECTRUM_TYPES_H
-#define EXTRACTPOWERSPECTRUM_TYPES_H
+#ifndef GET_HR_RR_TYPES_H
+#define GET_HR_RR_TYPES_H
 
 // Include Files
 #include "rtwtypes.h"
@@ -28,19 +28,33 @@ struct emxArray__common
 
 #endif                                 //struct_emxArray__common
 
-#ifndef struct_emxArray_creal_T
-#define struct_emxArray_creal_T
+#ifndef struct_emxArray_boolean_T
+#define struct_emxArray_boolean_T
 
-struct emxArray_creal_T
+struct emxArray_boolean_T
 {
-  creal_T *data;
+  boolean_T *data;
   int *size;
   int allocatedSize;
   int numDimensions;
   boolean_T canFreeData;
 };
 
-#endif                                 //struct_emxArray_creal_T
+#endif                                 //struct_emxArray_boolean_T
+
+#ifndef struct_emxArray_int32_T
+#define struct_emxArray_int32_T
+
+struct emxArray_int32_T
+{
+  int *data;
+  int *size;
+  int allocatedSize;
+  int numDimensions;
+  boolean_T canFreeData;
+};
+
+#endif                                 //struct_emxArray_int32_T
 
 #ifndef struct_emxArray_real_T
 #define struct_emxArray_real_T
@@ -58,7 +72,7 @@ struct emxArray_real_T
 #endif
 
 //
-// File trailer for extractPowerSpectrum_types.h
+// File trailer for get_hr_rr_types.h
 //
 // [EOF]
 //
