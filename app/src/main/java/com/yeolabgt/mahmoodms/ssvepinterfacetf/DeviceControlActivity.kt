@@ -22,13 +22,10 @@ import android.widget.TextView
 import android.widget.Toast
 import android.widget.ToggleButton
 import com.androidplot.util.Redrawer
-import com.google.common.base.Splitter
 import com.yeolabgt.mahmoodms.actblelibrary.ActBle
-import kotlinx.android.synthetic.main.activity_device_control.*
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.experimental.and
 
 /**
@@ -41,10 +38,8 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     private var mGraphInitializedBoolean = false
     private var mGraphAdapterCh1: GraphAdapter? = null
     private var mGraphAdapterCh2: GraphAdapter? = null
-    private var mGraphAdapterCh3: GraphAdapter? = null
     private var mTimeDomainPlotAdapterCh1: XYPlotAdapter? = null
     private var mTimeDomainPlotAdapterCh2: XYPlotAdapter? = null
-    private var mTimeDomainPlotAdapterCh3: XYPlotAdapter? = null
     private var mCh1: DataChannel? = null
     private var mCh2: DataChannel? = null
     //Device Information
@@ -88,10 +83,11 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
     private val mNativeInterface = NativeInterfaceClass()
 
     private val mClassifyThread = Runnable {
-        val hrrrArray = mNativeInterface.jGetHRRR(mCh1!!.classificationBuffer, mCh2!!.classificationBuffer)
-        val hrrrString = "HR: %1.2f bpm".format(hrrrArray[0]) +
-                "RR: %1.2f breaths/min".format(hrrrArray[1])
-        runOnUiThread { textViewHRRR.text = hrrrString }
+        //TODO: Fix this.
+//        val hrrrArray = mNativeInterface.jGetHRRR(mCh1!!.classificationBuffer, mCh2!!.classificationBuffer)
+//        val hrrrString = "HR: %1.2f bpm".format(hrrrArray[0]) +
+//                "RR: %1.2f breaths/min".format(hrrrArray[1])
+//        runOnUiThread { textViewHRRR.text = hrrrString }
     }
 
     public override fun onCreate(savedInstanceState: Bundle?) {
@@ -138,23 +134,21 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             if (!b) {
                 mGraphAdapterCh2?.clearPlot()
                 mGraphAdapterCh1?.clearPlot()
-                mGraphAdapterCh3?.clearPlot()
             }
             mGraphAdapterCh1!!.plotData = b
             mGraphAdapterCh2!!.plotData = b
-            mGraphAdapterCh3!!.plotData = b
         }
         mExportButton.setOnClickListener { exportData() }
-        buttonWriteRegs.setOnClickListener {
-            val adasConfig = adasConfigEditText.text.toString()
-            val sArray = Splitter.fixedLength(8).split(adasConfig)
-            val adasConfigIntArray = ArrayList<Int>()
-            for (s in sArray) {
-                Log.i(TAG, s)
-                adasConfigIntArray.add(java.lang.Long.parseLong(s, 16).toInt())
-            }
-            writeSettingsADAS10004(adasConfigIntArray.toIntArray())
-        }
+//        buttonWriteRegs.setOnClickListener {
+//            val adasConfig = adasConfigEditText.text.toString()
+//            val sArray = Splitter.fixedLength(8).split(adasConfig)
+//            val adasConfigIntArray = ArrayList<Int>()
+//            for (s in sArray) {
+//                Log.i(TAG, s)
+//                adasConfigIntArray.add(java.lang.Long.parseLong(s, 16).toInt())
+//            }
+//            writeSettingsADAS10004(adasConfigIntArray.toIntArray())
+//        }
     }
 
     private fun exportData() {
@@ -240,11 +234,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
 
             mGraphAdapterCh1!!.setxAxisIncrementFromSampleRate(mSampleRate)
             mGraphAdapterCh2!!.setxAxisIncrementFromSampleRate(mSampleRate)
-            mGraphAdapterCh3!!.setxAxisIncrementFromSampleRate(mSampleRate)
 
             mGraphAdapterCh1!!.setSeriesHistoryDataPoints(250 * 5)
             mGraphAdapterCh2!!.setSeriesHistoryDataPoints(250 * 5)
-            mGraphAdapterCh3!!.setSeriesHistoryDataPoints(250 * 5)
             val fileNameTimeStamped = "ECGHRRR_" + timeStamp + "_" + mSampleRate.toString() + "Hz"
             Log.e(TAG, "fileTimeStamp: $fileNameTimeStamped")
             try {
@@ -254,7 +246,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                 Log.e(TAG, "initializeBluetoothArray: IOException", e)
             }
 
-            mPrimarySaveDataFile!!.setSaveTimestamps(false)
+            mPrimarySaveDataFile!!.setSaveTimestamps(true)
             mPrimarySaveDataFile!!.setFpPrecision(64)
             mPrimarySaveDataFile!!.setIncludeClass(false)
         }
@@ -265,15 +257,12 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         // Initialize our XYPlot reference:
         mGraphAdapterCh1 = GraphAdapter(mSampleRate * 4, "ECG Data Ch 1", false, Color.BLUE)
         mGraphAdapterCh2 = GraphAdapter(mSampleRate * 4, "RR Data", false, Color.GREEN)
-        mGraphAdapterCh3 = GraphAdapter(mSampleRate * 4, "HR Data", false, Color.BLACK)
 
         //PLOT By default
         mGraphAdapterCh1!!.plotData = true
         mGraphAdapterCh2!!.plotData = true
-        mGraphAdapterCh3!!.plotData = true
         mGraphAdapterCh1!!.setPointWidth(2.toFloat())
         mGraphAdapterCh2!!.setPointWidth(2.toFloat())
-        mGraphAdapterCh3!!.setPointWidth(2.toFloat())
 
         mTimeDomainPlotAdapterCh1 = XYPlotAdapter(findViewById(R.id.eegTimeDomainXYPlot), false, 1000)
         if (mTimeDomainPlotAdapterCh1!!.xyPlot != null) {
@@ -283,11 +272,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         if (mTimeDomainPlotAdapterCh2!!.xyPlot != null) {
             mTimeDomainPlotAdapterCh2!!.xyPlot!!.addSeries(mGraphAdapterCh2!!.series, mGraphAdapterCh2!!.lineAndPointFormatter)
         }
-        mTimeDomainPlotAdapterCh3 = XYPlotAdapter(findViewById(R.id.eegTimeDomainXYPlot3), false, 1000)
-        if (mTimeDomainPlotAdapterCh3!!.xyPlot != null) {
-            mTimeDomainPlotAdapterCh3!!.xyPlot!!.addSeries(mGraphAdapterCh3!!.series, mGraphAdapterCh3!!.lineAndPointFormatter)
-        }
-        val xyPlotList = listOf(mTimeDomainPlotAdapterCh1!!.xyPlot, mTimeDomainPlotAdapterCh2!!.xyPlot, mTimeDomainPlotAdapterCh3!!.xyPlot)
+        val xyPlotList = listOf(mTimeDomainPlotAdapterCh1!!.xyPlot, mTimeDomainPlotAdapterCh2!!.xyPlot)
         mRedrawer = Redrawer(xyPlotList, 30f, false)
         mRedrawer!!.start()
         mGraphInitializedBoolean = true
@@ -411,7 +396,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         val bytes = ByteArray(intArray.size * 4)
         for (i in intArray.indices) {
             val byteInt = splitIntIntoByteArray(Integer.reverseBytes(intArray[i]))
-            System.arraycopy(byteInt, 0, bytes, 4*i, 4)
+            System.arraycopy(byteInt, 0, bytes, 4 * i, 4)
         }
         if (mEEGConfigGattService != null) {
             Log.e(TAG, "ADAS Config Registers: 0x" + bytesToHex(bytes))
@@ -606,7 +591,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             if (mCh1!!.characteristicDataPacketBytes != null && mCh2!!.characteristicDataPacketBytes != null) {
                 mPrimarySaveDataFile!!.writeToDisk(mCh1?.characteristicDataPacketBytes, mCh2?.characteristicDataPacketBytes)
             }
-            if (mCh1!!.dataPointCounterClassify > 500) {
+            if (mCh1!!.dataPointCounterClassify > 125/*Every 4 seconds*/) {
                 mCh1!!.resetCounterClassify()
                 val classifyThread = Thread(mClassifyThread)
                 classifyThread.start()
