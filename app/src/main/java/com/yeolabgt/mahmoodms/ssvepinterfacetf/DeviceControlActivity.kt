@@ -595,7 +595,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             if (mEEGConnectedAllChannels) {
                 mCh1!!.handleNewData(mNewEEGdataBytes)
                 if (mCh1!!.packetCounter.toInt() == mPacketBuffer) {
-                    addToGraphBuffer(mCh1!!, mGraphAdapterCh1)
+                    addToGraphBuffer(mCh1!!, mGraphAdapterCh1, true)
                 }
             }
         }
@@ -610,7 +610,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             if (mEEGConnectedAllChannels) {
                 mCh2!!.handleNewData(mNewEEGdataBytes)
                 if (mCh2!!.packetCounter.toInt() == mPacketBuffer) {
-                    addToGraphBuffer(mCh2!!, mGraphAdapterCh2)
+                    addToGraphBuffer(mCh2!!, mGraphAdapterCh2, false)
                 }
             }
         }
@@ -625,7 +625,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             if (mEEGConnectedAllChannels) {
                 mCh3!!.handleNewData(mNewEEGdataBytes)
                 if (mCh3!!.packetCounter.toInt() == mPacketBuffer) {
-                    addToGraphBuffer(mCh3!!, mGraphAdapterCh3)
+                    addToGraphBuffer(mCh3!!, mGraphAdapterCh3, false)
                 }
             }
         }
@@ -645,15 +645,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         }
     }
 
-    private fun addToGraphBuffer(dataChannel: DataChannel, graphAdapter: GraphAdapter?) {
+    private fun addToGraphBuffer(dataChannel: DataChannel, graphAdapter: GraphAdapter?, updateTrainingRoutine: Boolean) {
         if (mFilterData && dataChannel.totalDataPointsReceived > 1000) {
-            val filteredData = mNativeInterface.jSSVEPCfilter(dataChannel.classificationBuffer)
             graphAdapter!!.clearPlot()
-
-            for (i in filteredData.indices) { // gA.addDataPointTimeDomain(y,x)
-                graphAdapter.addDataPointTimeDomainAlt(filteredData[i].toDouble(),
-                        dataChannel.totalDataPointsReceived - 999 + i)
-            }
         } else {
             if (dataChannel.dataBuffer != null) {
                 if (mPrimarySaveDataFile!!.resolutionBits == 24) {
@@ -662,6 +656,11 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                         graphAdapter!!.addDataPointTimeDomain(DataChannel.bytesToDouble(dataChannel.dataBuffer!![3 * i],
                                 dataChannel.dataBuffer!![3 * i + 1], dataChannel.dataBuffer!![3 * i + 2]),
                                 dataChannel.totalDataPointsReceived - dataChannel.dataBuffer!!.size / 3 + i)
+                        if (updateTrainingRoutine) {
+                            for (j in 0 until graphAdapter.sampleRate / 250) {
+                                updateTrainingRoutine(dataChannel.totalDataPointsReceived - dataChannel.dataBuffer!!.size / 3 + i + j)
+                            }
+                        }
                         i += graphAdapter.sampleRate / 250
                     }
                 } else if (mPrimarySaveDataFile!!.resolutionBits == 16) {
@@ -670,6 +669,11 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
                         graphAdapter!!.addDataPointTimeDomain(DataChannel.bytesToDouble(dataChannel.dataBuffer!![2 * i],
                                 dataChannel.dataBuffer!![2 * i + 1]),
                                 dataChannel.totalDataPointsReceived - dataChannel.dataBuffer!!.size / 2 + i)
+                        if (updateTrainingRoutine) {
+                            for (j in 0 until graphAdapter.sampleRate / 250) {
+                                updateTrainingRoutine(dataChannel.totalDataPointsReceived - dataChannel.dataBuffer!!.size / 2 + i + j)
+                            }
+                        }
                         i += graphAdapter.sampleRate / 250
                     }
                 }
@@ -680,6 +684,15 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
         dataChannel.packetCounter = 0.toShort()
     }
 
+    private fun updateTrainingRoutine(dataPoints: Int) {
+        if (dataPoints % mSampleRate == 0 && mRunTrainingBool) {
+            val second = dataPoints / mSampleRate
+            when (second) {
+                3, 5, 7, 9 -> mMediaBeep.start()
+            }
+        }
+    }
+
     private fun getDataRateBytes(bytes: Int) {
         val mCurrentTime = System.currentTimeMillis()
         points += bytes
@@ -687,9 +700,9 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener {
             dataRate = (points / 5).toDouble()
             points = 0
             mLastTime = mCurrentTime
-            Log.e(" DataRate:", dataRate.toString() + " Bytes/s")
+            Log.e(" DataRate:", "$dataRate Bytes/s")
             runOnUiThread {
-                val s = dataRate.toString() + " Bytes/s"
+                val s = "$dataRate Bytes/s"
                 mDataRate!!.text = s
             }
         }
