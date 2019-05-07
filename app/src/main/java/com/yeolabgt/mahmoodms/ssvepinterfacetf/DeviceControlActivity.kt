@@ -134,7 +134,7 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
         val y: DoubleArray
         if (mTFRunModel) {
             // Log time before preprocessing
-            Log.i(TAG, "onCharacteristicChanged: TF_PRECALL_TIME, N#" + mNumberOfClassifierCalls.toString())
+            Log.i(TAG, "onCharacteristicChanged: TF_PRECALL_TIME, N#$mNumberOfClassifierCalls")
             //Run TF Model: SEE ORIGINAL .py SCRIPT TO VERIFY CORRECT INPUTS!
             val outputScores = FloatArray(5)//5 is number of classes/labels
             // Extract features from last wlen=256 datapoints:
