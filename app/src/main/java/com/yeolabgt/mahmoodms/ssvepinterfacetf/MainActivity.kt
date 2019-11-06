@@ -30,8 +30,7 @@ import android.widget.Toast
 import com.parrot.arsdk.ARSDK
 import com.parrot.arsdk.ardiscovery.ARDiscoveryDeviceService
 import com.yeolabgt.mahmoodms.ssvepinterfacetf.ParrotDrone.DroneDiscoverer
-
-import java.util.ArrayList
+import java.util.*
 
 /**
  * Created by mahmoodms on 6/30/2016.
@@ -63,7 +62,7 @@ class MainActivity : Activity() {
             var isDrone = false
             for (i in mDronesList.indices) {
                 if (result.device.name != null) {
-                    if (mDronesList[i].name.toLowerCase() == result.device.name.toLowerCase()) {
+                    if (mDronesList[i].name.toLowerCase(Locale.ROOT) == result.device.name.toLowerCase(Locale.ROOT)) {
                         isDrone = true
                     }
                 }
@@ -71,8 +70,18 @@ class MainActivity : Activity() {
             if (!isDrone) {
                 runOnUiThread {
                     if (!mDeviceAddressesMAC.contains(result.device.address)) {
-                        scannedDeviceAdapter!!.update(result.device, result.rssi, result.scanRecord)
-                        scannedDeviceAdapter!!.notifyDataSetChanged()
+                        if (result.device.name != null && result.device.name.toLowerCase(Locale.ROOT).contains("eeg")) {
+                            mDeviceNames.add(result.device.name)
+                            mDeviceAddressesMAC.add(result.device.address)
+                            mDevicesSelectedCount++
+                            selectedDeviceAdapter!!.update(result.device, result.rssi, result.scanRecord!!)
+                            selectedDeviceAdapter!!.notifyDataSetChanged()
+                            Toast.makeText(this@MainActivity, "Device Selected: "
+                                    + result.device.name + "\n" + result.device.address , Toast.LENGTH_SHORT).show()
+                        } else {
+                            scannedDeviceAdapter!!.update(result.device, result.rssi, result.scanRecord!!)
+                            scannedDeviceAdapter!!.notifyDataSetChanged()
+                        }
                     }
                 }
             }

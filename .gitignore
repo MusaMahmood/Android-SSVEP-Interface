@@ -37,3 +37,4 @@ build/android-profile/
 build/
 app/gradleBuild/
 .gradle/
+app/.cxx/
