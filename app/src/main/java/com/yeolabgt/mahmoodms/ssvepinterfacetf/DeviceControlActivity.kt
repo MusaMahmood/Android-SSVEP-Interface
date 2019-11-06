@@ -878,12 +878,16 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
                 mCh1!!.chEnabled = true
             }
             getDataRateBytes(mNewEEGdataBytes.size)
-            if (mEEGConnectedAllChannels) {
-                mCh1!!.handleNewData(mNewEEGdataBytes)
-                if (mCh1!!.packetCounter.toInt() == mPacketBuffer) {
-                    addToGraphBuffer(mCh1!!, mGraphAdapterCh1, true)
-                }
+            mCh1!!.handleNewData(mNewEEGdataBytes)
+            if (mCh1!!.packetCounter.toInt() == mPacketBuffer) {
+                addToGraphBuffer(mCh1!!, mGraphAdapterCh1, true)
             }
+            mNumber2ChPackets++
+            if (mNumber2ChPackets % 3 == 0) {
+                val powerSpectrumThreadTask = Thread(mPowerSpectrumRunnableThread)
+                powerSpectrumThreadTask.start()
+            }
+            mPrimarySaveDataFile!!.writeToDisk(mCh1!!.characteristicDataPacketBytes)
         }
 
         if (AppConstant.CHAR_EEG_CH2_SIGNAL == characteristic.uuid) {
@@ -925,23 +929,14 @@ class DeviceControlActivity : Activity(), ActBle.ActBleListener, TensorflowOptio
             getDataRateBytes(characteristic.value.size)
         }
 
-        if (mCh1!!.chEnabled && mCh2!!.chEnabled) {
-            mNumber2ChPackets++
-            mEEGConnectedAllChannels = true
-            mCh1!!.chEnabled = false
-            mCh2!!.chEnabled = false
-            if (mCh1!!.characteristicDataPacketBytes != null && mCh2!!.characteristicDataPacketBytes != null) {
-                mPrimarySaveDataFile!!.writeToDisk(mCh1!!.characteristicDataPacketBytes, mCh2!!.characteristicDataPacketBytes)
-            }
-            if (mNumber2ChPackets % 20 == 0) { //Every x * 20 data points
-                val classifyTaskThread = Thread(mClassifyThread)
-                classifyTaskThread.start()
-            }
-            if (mNumber2ChPackets % 3 == 0) {
-                val powerSpectrumThreadTask = Thread(mPowerSpectrumRunnableThread)
-                powerSpectrumThreadTask.start()
-            }
-        }
+//        if (mCh1!!.chEnabled && mCh2!!.chEnabled) {
+//            mEEGConnectedAllChannels = true
+//            mCh1!!.chEnabled = false
+//            mCh2!!.chEnabled = false
+//            if (mCh1!!.characteristicDataPacketBytes != null && mCh2!!.characteristicDataPacketBytes != null) {
+//                mPrimarySaveDataFile!!.writeToDisk(mCh1!!.characteristicDataPacketBytes, mCh2!!.characteristicDataPacketBytes)
+//            }
+//        }
 
         runOnUiThread {
             val concat = "C:[$mSSVEPClass]"
